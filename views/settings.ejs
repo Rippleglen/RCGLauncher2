@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Settings</title>
+  <link rel="stylesheet" href="../styles/settings.css">
+</head>
+<body>
+  <div id="settings-container">
+    <button id="back-button">Back</button>
+    
+    <div class="card">
+      <h2>Settings</h2>
+    </div>
+
+    <!-- Java Settings Section -->
+    <div class="card">
+      <h3>Java Settings</h3>
+      <p>Toggle between automatic and manual Java management.</p>
+
+      <!-- Toggle Switch for Automatic/Manual Java Path -->
+      <label class="toggle-label">
+        <span>Automatic</span>
+        <input type="checkbox" id="java-mode-toggle">
+        <span>Manual</span>
+      </label>
+
+      <!-- Java Options for Manual Mode -->
+      <div id="java-options" class="hidden">
+        <p>Select a Java installation:</p>
+        <div id="java-path-options"></div>
+        <button id="browse-java-button">Browse for Java Path</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="../renderer/settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+JVM info: Eclipse Adoptium - 21.0.5 - 21.0.5+11-LTS
+java.net.preferIPv4Stack=true
+Current Time: 01/11/2024 14:45:08
+Exception in thread "main" joptsimple.UnrecognizedOptionException: directory is not a recognized option
+	at joptsimple.OptionException.unrecognizedOption(OptionException.java:108)
+	at joptsimple.OptionParser.handleLongOptionToken(OptionParser.java:510)
+	at joptsimple.OptionParserState$2.handleArgument(OptionParserState.java:56)
+	at joptsimple.OptionParser.parse(OptionParser.java:396)
+	at net.minecraftforge.installer.SimpleInstaller.main(SimpleInstaller.java:100)

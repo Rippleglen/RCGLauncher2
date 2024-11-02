@@ -6,8 +6,13 @@
     "start": "electron .",
     "build": "electron-builder"
   },
+  "repository": "https://github.com/Rippleglen/RCGLauncher2",
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
   "keywords": [],
-  "author": "",
+  "author": "Taylor Roberts",
   "license": "ISC",
   "description": "",
   "devDependencies": {

@@ -1,7 +1,6 @@
 // main.js
 require('ejs-electron');
 
-const { autoUpdater } = require('electron-updater');
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { setupMicrosoftAuth, loadAuthData } = require('./auth/microsoftAuth');
 const { execSync } = require('child_process');
@@ -20,31 +19,13 @@ const { fetchMetadata, synchronizeFiles } = require('./components/metadataSync')
 const RSSParser = require('rss-parser');
 const rssParser = new RSSParser();
 const RSS_URL = 'https://snuggledtogetherblog.wordpress.com/feed/'
+const { autoUpdater, AppUpdater } = require("electron-updater")
 
 let mainWindow;
 
-autoUpdater.on('update-available', () => {
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Available',
-    message: 'A new version is available. Downloading now...'
-  });
-});
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 
-autoUpdater.on('update-downloaded', () => {
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Ready',
-    message: 'Install and restart now?',
-    buttons: ['Yes', 'Later']
-  }).then(result => {
-    if (result.response === 0) autoUpdater.quitAndInstall();
-  });
-});
-
-app.on('ready', () => {
-  autoUpdater.checkForUpdatesAndNotify();
-});
 
 async function createWindow() {  // Make createWindow async
   mainWindow = new BrowserWindow({
@@ -167,6 +148,7 @@ app.whenReady().then(async () => {
   ensureConfigFile(); // Ensure config file exists
   await createWindow();
   setupMicrosoftAuth(mainWindow, appDataPath); // Pass appDataPath to microsoftAuth
+  autoUpdater.checkForUpdates(),
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

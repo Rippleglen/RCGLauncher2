@@ -22,15 +22,3 @@ jobs:
         run: npm run build  # Assuming "build" is the script in package.json for building your app
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Package app for Windows
-        run: npx electron-builder --win nsis -c.extraMetadata.version=${{ github.event.release.tag_name }}
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload release asset
-        uses: softprops/action-gh-release@v1
-        with:
-          files: 'dist/*.exe'  # Path to your built .exe file
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}

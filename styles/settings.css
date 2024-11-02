@@ -7,8 +7,8 @@ body {
   padding: 20px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
+  align-items: row;
+  height: 150vh;
 }
 
 #settings-container {
@@ -20,6 +20,14 @@ body {
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
   text-align: center;
   color: #ffffff;
+}
+
+#settings-container::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
+}
+
+body::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
 }
 
 /* Card Style */
@@ -92,3 +100,30 @@ button:hover {
 .hidden {
   display: none;
 }
+
+#skin-preview {
+  margin: 10px 0;
+  text-align: center;
+}
+
+#skin-preview {
+  display: block;
+  margin: 10px auto;
+  width: 64px;
+  height: 128px;
+}
+
+#apply-skin-button {
+  padding: 10px;
+  background-color: #357ae8;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#apply-skin-button:hover {
+  background-color: #4caf50;
+}
+

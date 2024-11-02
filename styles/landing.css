@@ -66,11 +66,22 @@ body, html {
   max-height: 150px;
   overflow-y: auto;
   font-size: 0.9em;
+  text-decoration: none;
+}
+
+#news-list::-webkit-scrollbar {
+  width: 0;
 }
 
 #news-list li {
+  text-decoration: none;
   margin-bottom: 8px;
   color: #cccccc;
+}
+
+#news-list a {
+  text-decoration: none;
+  color: #ffffff;
 }
 
 /* Modpack Carousel */

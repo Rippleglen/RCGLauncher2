@@ -1,6 +1,7 @@
 // main.js
 require('ejs-electron');
 
+const { autoUpdater } = require('electron-updater');
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { setupMicrosoftAuth, loadAuthData } = require('./auth/microsoftAuth');
 const { execSync } = require('child_process');
@@ -19,9 +20,31 @@ const { fetchMetadata, synchronizeFiles } = require('./components/metadataSync')
 const RSSParser = require('rss-parser');
 const rssParser = new RSSParser();
 const RSS_URL = 'https://snuggledtogetherblog.wordpress.com/feed/'
-require('dotenv').config(); // Load environment variables
 
 let mainWindow;
+
+autoUpdater.on('update-available', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Available',
+    message: 'A new version is available. Downloading now...'
+  });
+});
+
+autoUpdater.on('update-downloaded', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Ready',
+    message: 'Install and restart now?',
+    buttons: ['Yes', 'Later']
+  }).then(result => {
+    if (result.response === 0) autoUpdater.quitAndInstall();
+  });
+});
+
+app.on('ready', () => {
+  autoUpdater.checkForUpdatesAndNotify();
+});
 
 async function createWindow() {  // Make createWindow async
   mainWindow = new BrowserWindow({
@@ -71,6 +94,23 @@ function sendToRenderer(channel, message) {
     mainWindow.webContents.send(channel, message);
   }
 }
+
+app.on('web-contents-created', (event, webContents) => {
+  webContents.setWindowOpenHandler(({ url }) => {
+    const win = new BrowserWindow({
+      width: 800,        // Set width as needed
+      height: 600,       // Set height as needed
+      autoHideMenuBar: true, // Hide the menu bar
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+    
+    win.loadURL(url); // Load the clicked URL in the new window
+    return { action: 'deny' }; // Prevent default Electron behavior
+  });
+});
 
 // Example of logging an error and sending it to the renderer
 async function fetchModpacks() {
@@ -213,6 +253,10 @@ ipcMain.handle('browse-java', async () => {
   return !canceled && filePaths.length ? filePaths[0] : null;
 });
 
+ipcMain.handle('get-system-ram', () => {
+  return os.totalmem(); // Returns RAM in bytes
+});
+
 // Handle Modpack Launching
 ipcMain.on('play-modpack', async (event, modpack) => {
   try {
@@ -244,11 +288,28 @@ async function getOrDownloadJavaForVersion(minecraftVersion) {
   }
 }
 
+async function getHalfSystemRAM() {
+  const totalRAM = Math.floor(os.totalmem() / (1024 ** 3)); // Convert bytes to GB
+  return Math.max(4, Math.min(16, Math.floor(totalRAM / 2))) || 8; // Default to 8GB if result is 0
+}
+
 // main.js - launchModpack integration
 async function launchModpack(modpack, javaPath) {
   try {
     const authData = await loadAuthData(appDataPath);
     if (!authData) throw new Error("Auth data is missing.");
+
+    const { memoryMode, memoryAllocation } = loadMemoryConfig();
+    let memory;
+
+    if (memoryMode === 'manual' && memoryAllocation) {
+      memory = `${memoryAllocation}G`;
+    } else {
+      const autoMemory = await getHalfSystemRAM();
+      memory = `${autoMemory}G`;
+    }
+
+    if (!memory || memory === '0G') memory = '8G'; // Ensure memory is valid, defaulting to 8GB if needed
 
     const instancePath = path.join(appDataPath, 'instances', modpack.name);
     if (!fs.existsSync(instancePath)) {
@@ -281,6 +342,10 @@ async function launchModpack(modpack, javaPath) {
       version: { number: modpack.version, type: 'release' },
       javaPath,
       forge: forgeInstallerPath, 
+      memory: {
+        max: memory,
+        min: memory
+      }
     };
 
     console.log('Launching modpack with options:', options);
@@ -334,3 +399,104 @@ ipcMain.handle('fetch-news', async () => {
     return [];
   }
 });
+
+
+ipcMain.handle('apply-skin', async (event, skinUrl) => {
+  try {
+    const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
+    const authData = await loadAuthData(appDataPath);
+    
+    if (!authData || !authData.access_token) {
+      throw new Error('Authentication token not found');
+    }
+
+    const response = await fetch('https://api.minecraftservices.com/minecraft/profile/skins', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authData.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        variant: "classic",  // Change this to "slim" if the user prefers
+        url: skinUrl        // Use the provided URL instead of base64 data
+      })
+    });
+
+    if (response.ok) {
+      return { success: true };
+    } else {
+      const errorData = await response.json();
+      return { success: false, error: errorData.errorMessage || 'Unknown error' };
+    }
+  } catch (error) {
+    console.error('Error applying skin:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+
+
+
+// main.js
+ipcMain.handle('fetch-player-skin', async () => {
+  try {
+    const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
+    const authData = await loadAuthData(appDataPath);
+
+    if (!authData || !authData.uuid) {
+      throw new Error('Player UUID not found');
+    }
+
+    const response = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${authData.uuid}`);
+    
+    if (!response.ok) throw new Error(`Failed to fetch player profile: ${response.statusText}`);
+    
+    const profileData = await response.json();
+    const properties = profileData.properties.find(prop => prop.name === 'textures');
+
+    if (properties) {
+      const decodedTextures = JSON.parse(Buffer.from(properties.value, 'base64').toString());
+      const skinUrl = decodedTextures.textures.SKIN.url;
+      return skinUrl;
+    }
+
+    throw new Error('No skin URL found in player profile');
+  } catch (error) {
+    console.error('Error fetching player skin:', error);
+    return null;
+  }
+});
+
+
+
+ipcMain.handle('get-auth-data', async () => {
+  try {
+    const authData = await loadAuthData(appDataPath); // Ensure `appDataPath` is correct
+    return authData; // Return auth data to renderer
+  } catch (error) {
+    console.error('Failed to load auth data:', error);
+    return null;
+  }
+});
+
+// Expose memory config loading and saving via IPC
+ipcMain.handle('load-memory-config', () => loadMemoryConfig());
+ipcMain.on('save-memory-config', (event, memoryMode, memoryAllocation) => {
+  saveMemoryConfig(memoryMode, memoryAllocation);
+});
+
+function loadMemoryConfig() {
+  const config = loadConfig();
+  return {
+    memoryMode: config.memoryMode || 'automatic',
+    memoryAllocation: config.memoryAllocation || 4, // Default to 4GB if not set
+  };
+}
+
+// Save memory configuration to the config file
+function saveMemoryConfig(memoryMode, memoryAllocation) {
+  const config = loadConfig();
+  config.memoryMode = memoryMode;
+  config.memoryAllocation = memoryAllocation;
+  saveConfig(config);
+}

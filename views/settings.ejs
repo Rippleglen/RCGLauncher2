@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="../styles/settings.css">
 </head>
 <body>
-  <div id="settings-container">
+  <div>
     <button id="back-button">Back</button>
     
     <div class="card">
@@ -31,6 +31,37 @@
         <div id="java-path-options"></div>
         <button id="browse-java-button">Browse for Java Path</button>
       </div>
+    </div>
+    <div class="card">
+      <h3>Memory Allocation</h3>
+      <p>Toggle between automatic and manual memory allocation.</p>
+    
+      <!-- Toggle Switch for Automatic/Manual Memory Allocation -->
+      <label class="toggle-label">
+        <span>Automatic</span>
+        <input type="checkbox" id="memory-mode-toggle">
+        <span>Manual</span>
+      </label>
+      <p id="memory-info-text" class="hidden"></p>
+      <p style="font-size: .8rem; padding-top: .5rem;">*In automatic mode, system ram may be lower than expected due to windows allocation rules.</p>
+
+    
+      <!-- Memory Slider for Manual Mode -->
+      <div id="memory-slider-container" class="hidden">
+        <input type="range" id="memory-slider" min="4" max="16" step="2">
+        <span id="memory-value">8GB</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="settings-section">
+        <h3>Change Minecraft Skin</h3>
+        <p style="font-size: 1.5ch;">Classic (Steve) Format skins are only accepted currently. Skin preview can take up to 24hrs to update</p>
+        <div id="skin-preview-container"> <!-- Changed id for the container -->
+          <img id="skin-preview" src="" alt="Player Skin Preview" style="width: auto; height: 100;">
+        </div>
+        <input type="file" id="skin-upload" accept=".png">
+        <button id="apply-skin-button">Apply Skin</button>
+      </div>     
     </div>
   </div>
   

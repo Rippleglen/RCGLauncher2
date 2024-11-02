@@ -31,4 +31,4 @@ jobs:
         with:
           files: 'dist/*.exe'  # Path to your built .exe file
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

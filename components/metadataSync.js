@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { sendToRenderer } = require('../main');
 
 // Fetch function to handle the download
 async function fetchWithDynamicImport(url) {
@@ -30,64 +29,51 @@ async function downloadFile(url, destination) {
   console.log(`Downloaded file to ${destination}`);
 }
 
-// Function to synchronize all files across dynamic folders in metadata
-async function synchronizeFiles(metadata, modpackName, instancePath) {
-  const baseUrl = `https://cdn.andreasrp.com/rcg2/instances/${encodeURIComponent(modpackName)}/`;
+// Recursive function to process and sync nested metadata
+async function processMetadataRecursively(folderMetadata, localFolderPath, remoteFolderPath) {
+  // Ensure the local folder path exists
+  if (!fs.existsSync(localFolderPath)) {
+    fs.mkdirSync(localFolderPath, { recursive: true });
+  }
 
-  for (const [folderName, folderFiles] of Object.entries(metadata)) {
-    const localFolderPath = path.join(instancePath, folderName);
+  // Process each entry in the metadata
+  for (const [entryName, entryValue] of Object.entries(folderMetadata)) {
+    const localEntryPath = path.join(localFolderPath, entryName);
+    const remoteEntryUrl = `${remoteFolderPath}/${entryName}`;
 
-    // Ensure folder exists locally
-    if (!fs.existsSync(localFolderPath)) {
-      fs.mkdirSync(localFolderPath, { recursive: true });
-    }
-
-    // Track files locally to detect user-added files
-    const localFiles = fs.readdirSync(localFolderPath).filter((file) => fs.statSync(path.join(localFolderPath, file)).isFile());
-    const serverFiles = Object.keys(folderFiles);
-    
-    // Detect and log user-added files
-    const userAddedFiles = localFiles.filter((file) => !serverFiles.includes(file));
-    if (userAddedFiles.length > 0) {
-      console.log(`User-added files in ${folderName}:`, userAddedFiles);
-    }
-
-    // Loop through each file in the server's metadata for this folder
-    for (const [fileName, expectedHash] of Object.entries(folderFiles)) {
-      const localFilePath = path.join(localFolderPath, fileName);
-      const remoteFileUrl = `${baseUrl}${folderName}/${fileName}`;
-
+    if (typeof entryValue === 'string') {
+      // If entryValue is a string, it's a file (entryValue is its hash)
       try {
         // Check if the file exists and matches the expected hash
-        if (fs.existsSync(localFilePath) && fs.lstatSync(localFilePath).isFile()) {
-          const localFileHash = calculateFileHash(localFilePath);
-          if (localFileHash === expectedHash) {
-            console.log(`File ${folderName}/${fileName} is up-to-date.`);
+        if (fs.existsSync(localEntryPath) && fs.lstatSync(localEntryPath).isFile()) {
+          const localFileHash = calculateFileHash(localEntryPath);
+          if (localFileHash === entryValue) {
+            console.log(`File ${entryName} is up-to-date.`);
             continue;
           } else {
-            console.log(`File ${folderName}/${fileName} is outdated. Updating...`);
+            console.log(`File ${entryName} is outdated. Updating...`);
           }
         } else {
-          console.log(`File ${folderName}/${fileName} is missing. Downloading...`);
+          console.log(`File ${entryName} is missing. Downloading...`);
         }
 
         // Download the file if it’s missing or outdated
-        await downloadFile(remoteFileUrl, localFilePath);
+        await downloadFile(remoteEntryUrl, localEntryPath);
       } catch (error) {
-        console.error(`Error processing file ${folderName}/${fileName}:`, error);
+        console.error(`Error processing file ${entryName}:`, error);
       }
+    } else if (typeof entryValue === 'object') {
+      // If entryValue is an object, it's a directory, so recurse
+      await processMetadataRecursively(entryValue, localEntryPath, remoteEntryUrl);
     }
-
-    // Remove files from the local folder if they’re not in server metadata (optional)
-    localFiles.forEach((file) => {
-      if (!serverFiles.includes(file)) {
-        const filePathToRemove = path.join(localFolderPath, file);
-        fs.unlinkSync(filePathToRemove);
-        console.log(`Removed outdated file: ${folderName}/${file}`);
-      }
-    });
   }
+}
 
+// Main synchronization function that uses the updated metadata format
+async function synchronizeFiles(metadata, modpackName, instancePath) {
+  const baseUrl = `https://cdn.andreasrp.com/rcg2/instances/${encodeURIComponent(modpackName)}/`;
+  
+  await processMetadataRecursively(metadata, instancePath, baseUrl);
   console.log(`Synchronization complete for modpack: ${modpackName}`);
 }
 

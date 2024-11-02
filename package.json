@@ -1,6 +1,6 @@
 {
   "name": "RCGLauncher",
-  "version": "v1.0.0",
+  "version": "v1.0.1",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

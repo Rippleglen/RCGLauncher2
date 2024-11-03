@@ -29,7 +29,7 @@ async function downloadFile(url, destination) {
   console.log(`Downloaded file to ${destination}`);
 }
 
-// Recursive function to process and sync nested metadata
+// Recursive function to process and sync only tracked files in metadata
 async function processMetadataRecursively(folderMetadata, localFolderPath, remoteFolderPath) {
   // Ensure the local folder path exists
   if (!fs.existsSync(localFolderPath)) {
@@ -42,7 +42,7 @@ async function processMetadataRecursively(folderMetadata, localFolderPath, remot
     const remoteEntryUrl = `${remoteFolderPath}/${entryName}`;
 
     if (typeof entryValue === 'string') {
-      // If entryValue is a string, it's a file (entryValue is its hash)
+      // Entry is a file with its hash
       try {
         // Check if the file exists and matches the expected hash
         if (fs.existsSync(localEntryPath) && fs.lstatSync(localEntryPath).isFile()) {
@@ -63,10 +63,20 @@ async function processMetadataRecursively(folderMetadata, localFolderPath, remot
         console.error(`Error processing file ${entryName}:`, error);
       }
     } else if (typeof entryValue === 'object') {
-      // If entryValue is an object, it's a directory, so recurse
+      // Entry is a directory, so recurse
       await processMetadataRecursively(entryValue, localEntryPath, remoteEntryUrl);
     }
   }
+
+  // Check for local files that aren't in metadata and skip them
+  const localFiles = fs.readdirSync(localFolderPath);
+  localFiles.forEach((localFile) => {
+    const localFilePath = path.join(localFolderPath, localFile);
+    if (!folderMetadata.hasOwnProperty(localFile) && fs.lstatSync(localFilePath).isFile()) {
+      // Ignore files not in metadata; do not delete them
+      console.log(`Ignoring user-added or Minecraft-generated file: ${localFile}`);
+    }
+  });
 }
 
 // Main synchronization function that uses the updated metadata format

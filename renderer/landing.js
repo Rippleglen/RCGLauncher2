@@ -8,7 +8,6 @@ async function loadModpacks() {
     modpackList.innerHTML = ''; // Clear existing content
 
     modpacks.forEach(modpack => {
-      // Create modpack card
       const modpackItem = document.createElement('div');
       modpackItem.classList.add('modpack-item');
 
@@ -71,7 +70,6 @@ function startMeteorAnimation() {
     });
   }
 
-  // Generate meteors at intervals for a limited time
   const interval = setInterval(createMeteor, 50);
   setTimeout(() => clearInterval(interval), 120000); // Stop meteors after time
 }
@@ -83,22 +81,54 @@ function addTerminalMessage(message) {
     const messageElement = document.createElement('div');
     messageElement.textContent = message;
     terminal.appendChild(messageElement);
-
-    // Scroll to the bottom of the terminal
     terminal.scrollTop = terminal.scrollHeight;
   } else {
     console.error("Launcher terminal element not found");
   }
 }
 
-
-// Listen for 'log-message' from the main process
 window.addEventListener('DOMContentLoaded', () => {
   ipcRenderer.on('log-message', (event, message) => {
     addTerminalMessage(message);
   });
+  
+  const versionCard = document.getElementById('version-card');
 
-  // Other setup code for news and modpacks
+  ipcRenderer.on('app-version', (event, version) => {
+    const versionText = document.getElementById('version-text');
+    if (versionText) {
+      versionText.textContent = `${version}`;
+    }
+  });
+
+  // Handle update notification
+  ipcRenderer.on('update-available', () => {
+    console.log('Update available detected');
+    versionCard.textContent = 'Update Available';
+    versionCard.classList.add('update-available');
+    startColorFade(versionCard);
+
+    // Add click handler for applying the update
+    versionCard.onclick = () => {
+      console.log('Applying update...');
+      ipcRenderer.send('apply-update');
+    };
+  });
+
+  // Listen for update-ready message (optional, for verification)
+  ipcRenderer.on('update-ready', () => {
+    console.log('Update is downloaded and ready');
+  });
+
   loadNews();
   loadModpacks();
 });
+
+function startColorFade(element) {
+  let fade = true;
+  setInterval(() => {
+    element.style.backgroundColor = fade ? '#357ae8' : '#242424';
+    fade = !fade;
+  }, 1000);
+}
+

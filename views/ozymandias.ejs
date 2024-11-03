@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Old Launcher Folder Detected</title>
+  <link rel="stylesheet" href="../styles/ozymandias.css">
+</head>
+<body>
+  <div id="ozymandias-container">
+    <img id="ozymandias-image" src="../assets/ozymandias.png" alt="Ozymandias Image">
+    <p style="font-style: italic;">My name is Ozymandias, king of kings:
+        Look on my works, ye Mighty, and despair...</p>
+    <div id="ozymandias-text">
+      RCGLauncher v1's AppData folder has been detected. Would you like to remove it?
+    </div>
+    <div id="button-container">
+      <button class="ozymandias-button remove" onclick="handleRemove()">Remove</button>
+      <button class="ozymandias-button keep" onclick="handleKeep()">Keep</button>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    function handleRemove() {
+      ipcRenderer.send('remove-old-launcher-folder');
+    }
+
+    function handleKeep() {
+      ipcRenderer.send('skip-old-launcher-folder');
+    }
+  </script>
+</body>
+</html>

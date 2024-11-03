@@ -7,17 +7,34 @@
 </head>
 <body>
   <div id="app">
-    <button id="settings-button" class="settings-button">⚙️</button>
+    <!-- Top Cards Section -->
+    <div id="top-cards">
+      <!-- Version Card -->
+      <div id="version-card" class="top-card">
+        <span id="version-text"></span> <!-- This will be dynamically updated with the version number -->
+      </div>
+      
+      <!-- Title Card -->
+      <div id="title-card" class="top-card">
+        <h1 style="font-size: 1.5ch;">RCGLauncher</h1>
+      </div>
+      
+      <button id="settings-button" style="margin-top: -3px;" class="settings-button">
+        <div id="settings-card" class="top-card">
+          <img id="settings-burger" style="width: auto; height: 20px;" src="../assets/settingsbars.png" alt="">
+        </div>
+      </button>
+    </div>
 
     <!-- News Section -->
     <div class="card" id="news-section">
       <h2>Latest News</h2>
-      <ul  id="news-list"></ul>
+      <ul id="news-list"></ul>
     </div>
 
     <!-- Modpack Carousel Section -->
     <div class="card" id="modpack-carousel">
-      <h2>Your Modpacks</h2>
+      <h2>Fetched Modpacks:</h2>
       <div id="modpack-list"></div>
     </div>
 

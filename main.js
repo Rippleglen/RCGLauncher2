@@ -20,6 +20,9 @@ const RSSParser = require('rss-parser');
 const rssParser = new RSSParser();
 const RSS_URL = 'https://snuggledtogetherblog.wordpress.com/feed/'
 const { autoUpdater, AppUpdater } = require("electron-updater")
+const oldLauncherFolder = path.join(app.getPath('appData'), '.rcglauncher');
+const packageJson = require('./package.json');
+
 
 let mainWindow;
 
@@ -37,7 +40,10 @@ async function createWindow() {  // Make createWindow async
     },
   });
 
+  
+
   mainWindow.setMenuBarVisibility(false); // This hides the menu bar
+  setupUpdateHandlers();
 
   // Load encrypted auth data with await
   const authData = await loadAuthData(appDataPath);
@@ -45,6 +51,42 @@ async function createWindow() {  // Make createWindow async
     mainWindow.loadFile('views/landing.ejs');
   } else {
     mainWindow.loadFile('views/welcome.ejs');
+  }
+  checkForOldLauncherFolder();
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.send('app-version', packageJson.version);
+  });
+}
+
+function setupUpdateHandlers() {
+  autoUpdater.on('update-available', () => {
+    mainWindow.webContents.send('update-available');
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow.webContents.send('update-ready');
+  });
+
+  // Start checking for updates
+  autoUpdater.checkForUpdatesAndNotify();
+}
+
+function simulateUpdate() {
+  console.log("Recieved update msg")
+  setTimeout(() => {
+    mainWindow.webContents.send('update-available');
+  }, 2000); // Delays 2 seconds for testing
+}
+
+ipcMain.on('apply-update', () => {
+  autoUpdater.quitAndInstall();
+});
+
+function checkForOldLauncherFolder() {
+  if (fs.existsSync(oldLauncherFolder)) {
+    mainWindow.loadFile('views/ozymandias.ejs');
+  } else {
+    mainWindow.loadFile('views/landing.ejs'); // or the main page of the launcher
   }
 }
 
@@ -482,3 +524,12 @@ function saveMemoryConfig(memoryMode, memoryAllocation) {
   config.memoryAllocation = memoryAllocation;
   saveConfig(config);
 }
+
+ipcMain.on('remove-old-launcher-folder', () => {
+  fs.rmdirSync(oldLauncherFolder, { recursive: true });
+  mainWindow.loadFile('views/landing.ejs'); // Load the main page after removal
+});
+
+ipcMain.on('keep-old-launcher-folder', () => {
+  mainWindow.loadFile('views/landing.ejs'); // Load the main page if the user decides to keep it
+});

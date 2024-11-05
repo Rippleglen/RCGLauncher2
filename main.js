@@ -2,7 +2,7 @@
 require('ejs-electron');
 
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const { setupMicrosoftAuth, loadAuthData } = require('./auth/microsoftAuth');
+const { setupMicrosoftAuth, getValidAuthData } = require('./auth/microsoftAuth');
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -30,32 +30,37 @@ autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
 
-async function createWindow() {  // Make createWindow async
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 450,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,   // Consider using preload scripts with context isolation for security
-      contextIsolation: false, // Disable context isolation
+      nodeIntegration: true,
+      contextIsolation: false,
     },
   });
 
-  
-
-  mainWindow.setMenuBarVisibility(false); // This hides the menu bar
+  mainWindow.setMenuBarVisibility(false);
   setupUpdateHandlers();
 
-  // Load encrypted auth data with await
-  const authData = await loadAuthData(appDataPath);
-  if (authData && authData.access_token) {
-    mainWindow.loadFile('views/landing.ejs');
-  } else {
-    mainWindow.loadFile('views/welcome.ejs');
-  }
-  checkForOldLauncherFolder();
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.send('app-version', packageJson.version);
   });
+
+  try {
+    // Attempt to get valid authentication data
+    const authData = await getValidAuthData(appDataPath);
+
+    // If successful, load the landing page
+    mainWindow.loadFile('views/landing.ejs');
+    checkForOldLauncherFolder();
+    
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+
+    // If there's an error (e.g., no auth data), load the welcome/login page
+    mainWindow.loadFile('views/welcome.ejs');
+  }
 }
 
 function setupUpdateHandlers() {
@@ -320,7 +325,7 @@ async function getHalfSystemRAM() {
 // main.js - launchModpack integration
 async function launchModpack(modpack, javaPath) {
   try {
-    const authData = await loadAuthData(appDataPath);
+    const authData = await getValidAuthData(appDataPath);
     if (!authData) throw new Error("Auth data is missing.");
 
     const { memoryMode, memoryAllocation } = loadMemoryConfig();
@@ -428,7 +433,7 @@ ipcMain.handle('fetch-news', async () => {
 ipcMain.handle('apply-skin', async (event, skinUrl) => {
   try {
     const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
-    const authData = await loadAuthData(appDataPath);
+    const authData = await getValidAuthData(appDataPath);
     
     if (!authData || !authData.access_token) {
       throw new Error('Authentication token not found');
@@ -465,7 +470,7 @@ ipcMain.handle('apply-skin', async (event, skinUrl) => {
 ipcMain.handle('fetch-player-skin', async () => {
   try {
     const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
-    const authData = await loadAuthData(appDataPath);
+    const authData = await getValidAuthData(appDataPath);
 
     if (!authData || !authData.uuid) {
       throw new Error('Player UUID not found');
@@ -495,7 +500,7 @@ ipcMain.handle('fetch-player-skin', async () => {
 
 ipcMain.handle('get-auth-data', async () => {
   try {
-    const authData = await loadAuthData(appDataPath); // Ensure `appDataPath` is correct
+    const authData = await getValidAuthData(appDataPath); // Ensure `appDataPath` is correct
     return authData; // Return auth data to renderer
   } catch (error) {
     console.error('Failed to load auth data:', error);

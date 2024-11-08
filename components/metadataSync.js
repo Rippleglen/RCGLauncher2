@@ -23,7 +23,7 @@ async function downloadFile(url, destination) {
   if (!response.ok) {
     throw new Error(`Failed to download file from ${url}`);
   }
-  
+
   const buffer = await response.arrayBuffer();
   fs.writeFileSync(destination, Buffer.from(buffer));
   console.log(`Downloaded file to ${destination}`);
@@ -67,23 +67,49 @@ async function processMetadataRecursively(folderMetadata, localFolderPath, remot
       await processMetadataRecursively(entryValue, localEntryPath, remoteEntryUrl);
     }
   }
+}
 
-  // Check for local files that aren't in metadata and skip them
-  const localFiles = fs.readdirSync(localFolderPath);
-  localFiles.forEach((localFile) => {
-    const localFilePath = path.join(localFolderPath, localFile);
-    if (!folderMetadata.hasOwnProperty(localFile) && fs.lstatSync(localFilePath).isFile()) {
-      // Ignore files not in metadata; do not delete them
-      console.log(`Ignoring user-added or Minecraft-generated file: ${localFile}`);
+// Function to remove outdated files based on the comparison of local and server metadata
+function removeOutdatedFiles(localMetadata, serverMetadata, localFolderPath) {
+  for (const [entryName, entryValue] of Object.entries(localMetadata)) {
+    const localEntryPath = path.join(localFolderPath, entryName);
+
+    if (!serverMetadata.hasOwnProperty(entryName)) {
+      if (fs.existsSync(localEntryPath)) {
+        if (fs.lstatSync(localEntryPath).isFile()) {
+          fs.unlinkSync(localEntryPath);
+          console.log(`Removed outdated file: ${localEntryPath}`);
+        } else if (fs.lstatSync(localEntryPath).isDirectory()) {
+          fs.rmdirSync(localEntryPath, { recursive: true });
+          console.log(`Removed outdated directory: ${localEntryPath}`);
+        }
+      }
+    } else if (typeof entryValue === 'object' && fs.existsSync(localEntryPath)) {
+      // Recurse into directories to remove outdated files within them
+      removeOutdatedFiles(entryValue, serverMetadata[entryName] || {}, localEntryPath);
     }
-  });
+  }
 }
 
 // Main synchronization function that uses the updated metadata format
 async function synchronizeFiles(metadata, modpackName, instancePath) {
   const baseUrl = `https://cdn.andreasrp.com/rcg2/instances/${encodeURIComponent(modpackName)}/`;
-  
+  const localMetadataPath = path.join(instancePath, 'local_metadata.json');
+
+  // Load local metadata if it exists
+  let localMetadata = {};
+  if (fs.existsSync(localMetadataPath)) {
+    localMetadata = JSON.parse(fs.readFileSync(localMetadataPath, 'utf-8'));
+  }
+
+  // Process files according to server metadata and update them as needed
   await processMetadataRecursively(metadata, instancePath, baseUrl);
+
+  // Remove outdated files that are in the local metadata but not in the server metadata
+  removeOutdatedFiles(localMetadata, metadata, instancePath);
+
+  // Save the server metadata as the new local metadata for future checks
+  fs.writeFileSync(localMetadataPath, JSON.stringify(metadata, null, 2));
   console.log(`Synchronization complete for modpack: ${modpackName}`);
 }
 

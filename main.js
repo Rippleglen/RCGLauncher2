@@ -387,7 +387,6 @@ async function launchModpack(modpack, javaPath) {
     
     launcher.on('data', (e) => {
       console.log('[DATA]', e);
-      sendToRenderer('log-message', `[DATA] ${e}`);
     });
     
     launcher.on('error', (e) => {

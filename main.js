@@ -22,6 +22,7 @@ const RSS_URL = 'https://snuggledtogetherblog.wordpress.com/feed/'
 const { autoUpdater, AppUpdater } = require("electron-updater")
 const oldLauncherFolder = path.join(app.getPath('appData'), '.rcglauncher');
 const packageJson = require('./package.json');
+const { exec } = require('child_process');
 
 
 let mainWindow;
@@ -29,6 +30,18 @@ let mainWindow;
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
+if (process.platform === 'win32' && !process.argv.includes('--elevated')) {
+  exec(`powershell -Command "Start-Process '${process.execPath}' -ArgumentList '${process.argv.slice(1).join(' ')} --elevated' -Verb RunAs"`, (error) => {
+    if (error) {
+      console.error('Failed to run as admin:', error);
+      app.quit();
+    } else {
+      app.quit(); // Exit the non-admin instance
+    }
+  });
+} else {
+  app.whenReady().then(createWindow);
+}
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -375,7 +388,35 @@ async function launchModpack(modpack, javaPath) {
       memory: {
         max: memory,
         min: memory
-      }
+      },
+      customArgs: [
+        "-XX:+UnlockExperimentalVMOptions",
+        "-XX:+UseShenandoahGC",
+        "-XX:ShenandoahGCMode=iu",
+        "-XX:ShenandoahGuaranteedGCInterval=1000000",
+        "-XX:+UseLargePages",
+        "-XX:AllocatePrefetchStyle=1",
+        "-XX:+UnlockDiagnosticVMOptions",
+        "-XX:+AlwaysActAsServerClassMachine",
+        "-XX:+ParallelRefProcEnabled",
+        "-XX:+DisableExplicitGC",
+        "-XX:+AlwaysPreTouch",
+        "-XX:+PerfDisableSharedMem",
+        "-XX:MaxInlineLevel=15",
+        "-XX:MaxVectorSize=32",
+        "-XX:+UseCompressedOops",
+        "-XX:ThreadPriorityPolicy=1",
+        "-XX:+UseNUMA",
+        "-XX:+UseDynamicNumberOfGCThreads",
+        "-XX:NmethodSweepActivity=1",
+        "-XX:ReservedCodeCacheSize=350M",
+        "-XX:-DontCompileHugeMethods",
+        "-XX:MaxNodeLimit=240000",
+        "-XX:NodeLimitFudgeFactor=8000",
+        "-XX:+UseFPUForSpilling",
+        "-XX:+UseXMMForArrayCopy",
+        "-Dgraal.CompilerConfiguration=community"
+      ]
     };
 
     console.log('Launching modpack with options:', options);

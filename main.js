@@ -1,7 +1,7 @@
 // main.js
 require('ejs-electron');
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { setupMicrosoftAuth, getValidAuthData } = require('./auth/microsoftAuth');
 const { execSync } = require('child_process');
 const path = require('path');
@@ -30,28 +30,33 @@ let mainWindow;
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
-if (process.platform === 'win32' && !process.argv.includes('--elevated')) {
-  exec(`powershell -Command "Start-Process '${process.execPath}' -ArgumentList '${process.argv.slice(1).join(' ')} --elevated' -Verb RunAs"`, (error) => {
-    if (error) {
-      console.error('Failed to run as admin:', error);
-      app.quit();
-    } else {
-      app.quit(); // Exit the non-admin instance
-    }
-  });
-} else {
-  app.whenReady().then(createWindow);
-}
+// Create a Trusted Types policy in your main JavaScript file or the entry point
+
+
+
+// if (process.platform === 'win32' && !process.argv.includes('--elevated')) {
+//   exec(`powershell -Command "Start-Process '${process.execPath}' -ArgumentList '${process.argv.slice(1).join(' ')} --elevated' -Verb RunAs"`, (error) => {
+//     if (error) {
+//       console.error('Failed to run as admin:', error);
+//       app.quit();
+//     } else {
+//       app.quit(); // Exit the non-admin instance
+//     }
+//   });
+// } else {
+//   app.whenReady().then(createWindow);
+// }
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 450,
-    height: 800,
+    minWidth: 1470,
+    minHeight: 750,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      nodeIntegrationInSubFrames: true,
     },
-    resizable: false
+    resizable: true
   });
 
   mainWindow.setMenuBarVisibility(false);
@@ -67,7 +72,6 @@ async function createWindow() {
 
     // If successful, load the landing page
     mainWindow.loadFile('views/landing.ejs');
-    checkForOldLauncherFolder();
     
   } catch (error) {
     console.error('Authentication error:', error.message);
@@ -106,18 +110,6 @@ function checkForOldLauncherFolder() {
     mainWindow.loadFile('views/ozymandias.ejs');
   } else {
     mainWindow.loadFile('views/landing.ejs'); // or the main page of the launcher
-  }
-}
-
-async function fetchModpacks() {
-  console.log(`Fetching modpacks`);
-  try {
-    const response = await fetch(MODPACKS_URL);
-    if (!response.ok) throw new Error(`Failed to fetch modpacks: ${response.statusText}`);
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching modpacks:', error);
-    return [];
   }
 }
 
@@ -224,6 +216,7 @@ app.on('window-all-closed', () => {
 ipcMain.on('load-landing-page', () => {
   if (mainWindow) {
     mainWindow.loadFile('views/landing.ejs');
+    checkForOldLauncherFolder();
   }
 });
 
@@ -240,6 +233,15 @@ ipcMain.handle('get-java-path', () => {
 ipcMain.handle('fetch-modpacks', fetchModpacks);
 
 ipcMain.handle('get-app-data-path', () => appDataPath);
+
+ipcMain.handle('open-directory', async (event, directoryPath) => {
+  try {
+      await shell.openPath(directoryPath);
+      console.log(`Opened directory: ${directoryPath}`);
+  } catch (error) {
+      console.error(`Failed to open directory: ${error.message}`);
+  }
+});
 
 ipcMain.on('open-settings', () => {
   if (mainWindow) {
@@ -301,7 +303,7 @@ ipcMain.handle('get-system-ram', () => {
 });
 
 // Handle Modpack Launching
-ipcMain.on('play-modpack', async (event, modpack) => {
+ipcMain.on('play-modpack', async (event, modpack) => { 
   try {
     const javaPath = await getOrDownloadJavaForVersion(modpack.version);
     if (javaPath) {
@@ -313,6 +315,7 @@ ipcMain.on('play-modpack', async (event, modpack) => {
     console.error(`Error launching modpack ${modpack.name}:`, error);
   }
 });
+
 
 async function getOrDownloadJavaForVersion(minecraftVersion) {
   try {
@@ -352,22 +355,29 @@ async function launchModpack(modpack, javaPath) {
       memory = `${autoMemory}G`;
     }
 
-    if (!memory || memory === '0G') memory = '8G'; // Ensure memory is valid, defaulting to 8GB if needed
+    if (!memory || memory === '0G') memory = '8G'; // Default to 8GB if needed
 
     const instancePath = path.join(appDataPath, 'instances', modpack.name);
     if (!fs.existsSync(instancePath)) {
       fs.mkdirSync(instancePath, { recursive: true });
       console.log(`Created instance directory for modpack: ${instancePath}`);
-      sendToRenderer('log-message', `Created instance directory for modpack: ${instancePath}`);
-      
     }
 
-    console.log("Fetching metadata and synchronizing files...");
-    sendToRenderer('log-message', `Fetching metadata and synchronizing files...`);
-    const metadata = await fetchMetadata(modpack.name);
-    await synchronizeFiles(metadata, modpack.name, instancePath);
+    const jvmArgsFilePath = path.join(appDataPath, 'launcher', `${modpack.name.replace(/\s+/g, '')}jvmargs.json`);
+    let jvmArgsArray = [];
 
-    // Set up NeoForge if specified
+    if (fs.existsSync(jvmArgsFilePath)) {
+      const jvmArgsData = JSON.parse(fs.readFileSync(jvmArgsFilePath, 'utf-8'));
+      if (typeof jvmArgsData.jvmArgs === 'string') {
+        jvmArgsArray = jvmArgsData.jvmArgs.split(' ').map(arg => arg.trim());
+      } else if (Array.isArray(jvmArgsData.jvmArgs)) {
+        jvmArgsArray = jvmArgsData.jvmArgs.map(arg => arg.trim());
+      } else {
+        console.error(`Invalid format for JVM arguments in ${jvmArgsFilePath}`);
+      }
+      console.log('Parsed JVM arguments:', jvmArgsArray);
+    }
+
     let forgeInstallerPath = null;
     if (modpack.modloader && modpack.modloader.type === "neoforge") {
       forgeInstallerPath = path.join(instancePath, path.basename(modpack.modloader.url));
@@ -384,62 +394,35 @@ async function launchModpack(modpack, javaPath) {
       root: instancePath,
       version: { number: modpack.version, type: 'release' },
       javaPath,
-      forge: forgeInstallerPath, 
       memory: {
         max: memory,
         min: memory
       },
-      customArgs: [
-        "-XX:+UnlockExperimentalVMOptions",
-        "-XX:+UseShenandoahGC",
-        "-XX:ShenandoahGCMode=iu",
-        "-XX:ShenandoahGuaranteedGCInterval=1000000",
-        "-XX:+UseLargePages",
-        "-XX:AllocatePrefetchStyle=1",
-        "-XX:+UnlockDiagnosticVMOptions",
-        "-XX:+AlwaysActAsServerClassMachine",
-        "-XX:+ParallelRefProcEnabled",
-        "-XX:+DisableExplicitGC",
-        "-XX:+AlwaysPreTouch",
-        "-XX:+PerfDisableSharedMem",
-        "-XX:MaxInlineLevel=15",
-        "-XX:MaxVectorSize=32",
-        "-XX:+UseCompressedOops",
-        "-XX:ThreadPriorityPolicy=1",
-        "-XX:+UseNUMA",
-        "-XX:+UseDynamicNumberOfGCThreads",
-        "-XX:NmethodSweepActivity=1",
-        "-XX:ReservedCodeCacheSize=350M",
-        "-XX:-DontCompileHugeMethods",
-        "-XX:MaxNodeLimit=240000",
-        "-XX:NodeLimitFudgeFactor=8000",
-        "-XX:+UseFPUForSpilling",
-        "-XX:+UseXMMForArrayCopy",
-        "-Dgraal.CompilerConfiguration=community"
-      ]
+      forge: forgeInstallerPath,
+      customArgs: jvmArgsArray
     };
 
     console.log('Launching modpack with options:', options);
-    sendToRenderer('log-message', `Launching Minecraft... [PLEASE WAIT]`);
     launcher.launch(options);
     launcher.on('debug', (e) => {
       console.log('[DEBUG]', e);
-      sendToRenderer('log-message', `[DEBUG] ${e}`);
     });
-    
+
     launcher.on('data', (e) => {
       console.log('[DATA]', e);
     });
-    
+
     launcher.on('error', (e) => {
       console.error('[ERROR]', e);
-      sendToRenderer('log-message', `[ERROR] ${e}`);
     });
   } catch (error) {
     console.error(`Error launching modpack ${modpack.name}:`, error);
-    sendToRenderer('log-message', `Error launching modpack ${modpack.name}:`);
   }
 }
+
+
+
+
 
 
 
@@ -471,7 +454,7 @@ ipcMain.handle('fetch-news', async () => {
 });
 
 
-ipcMain.handle('apply-skin', async (event, skinUrl) => {
+ipcMain.handle('apply-skin', async (event, skinUrl, mode) => {
   try {
     const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
     const authData = await getValidAuthData(appDataPath);
@@ -487,8 +470,8 @@ ipcMain.handle('apply-skin', async (event, skinUrl) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        variant: "classic",  // Change this to "slim" if the user prefers
-        url: skinUrl        // Use the provided URL instead of base64 data
+        variant: mode,  // Use the provided mode (e.g., "classic" or "slim")
+        url: skinUrl    // Use the provided URL
       })
     });
 
@@ -571,11 +554,45 @@ function saveMemoryConfig(memoryMode, memoryAllocation) {
   saveConfig(config);
 }
 
-ipcMain.on('remove-old-launcher-folder', () => {
-  fs.rmdirSync(oldLauncherFolder, { recursive: true });
-  mainWindow.loadFile('views/landing.ejs'); // Load the main page after removal
+ipcMain.on('remove-old-launcher-folder', async (event) => {
+  const oldLauncherPath = path.join(app.getPath('appData'), '.rcglauncher');
+  
+
+  if (fs.existsSync(oldLauncherPath)) {
+    try {
+      // Delete the folder
+      fs.rmSync(oldLauncherPath, { recursive: true, force: true });
+      console.log(`Successfully removed: ${oldLauncherPath}`);
+      mainWindow.loadFile('views/landing.ejs');
+
+      // Introduce a short delay to ensure the operation is completed
+      await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
+
+      // Notify the renderer process that the deletion was successful
+      event.sender.send('delete-success', 'The old launcher folder has been successfully removed.');
+    } catch (error) {
+      console.error(`Failed to remove folder: ${error.message}`);
+      event.sender.send('delete-error', `Failed to remove folder: ${error.message}`);
+      mainWindow.loadFile('views/landing.ejs');
+    }
+  } else {
+    console.warn(`Directory does not exist: ${oldLauncherPath}`);
+    event.sender.send('delete-error', 'The specified folder does not exist.');
+    mainWindow.loadFile('views/landing.ejs');
+  }
 });
 
 ipcMain.on('keep-old-launcher-folder', () => {
   mainWindow.loadFile('views/landing.ejs'); // Load the main page if the user decides to keep it
 });
+
+ipcMain.handle('open-file-dialog', async (event, options) => {
+  const result = await dialog.showOpenDialog(options);
+  return result;
+});
+
+ipcMain.on('navigate-to-welcome', (event) => {
+  const welcomePath = path.join(__dirname, 'views', 'welcome.ejs'); // Adjust path as needed
+  mainWindow.loadFile(welcomePath);
+});
+

@@ -1,284 +1,63 @@
-/* General Styles */
-body, html {
+body {
   margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  font-family: Arial, sans-serif;
+  font-family: 'Arial', sans-serif;
   background-color: #1e1e1e;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-/* App Container */
-#app {
-  width: 90%;
-  max-width: 450px;
-  text-align: center;
+#sidebar {
+  width: 250px;
+  background-color: #2b2b2b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.profile-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  z-index: 2;
-}
-
-/* Card Style */
-.card {
-  width: 100%;
-  padding: 20px;
-  background-color: rgba(37, 37, 37, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 10px;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-  text-align: left;
-}
-
-/* Settings Button */
-#settings-button {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: transparent;
-  color: #ffffff;
-  border: none;
-  font-size: 1.5em;
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-#settings-button:hover {
-  color: #357ae8;
-}
-
-/* News Section */
-#news-section h2 {
-  font-size: 1.2em;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #ffffff;
-}
-
-#news-list {
-  list-style: none;
-  padding: 0;
-  max-height: 150px;
-  overflow-y: auto;
-  font-size: 0.9em;
-  text-decoration: none;
-}
-
-#news-list::-webkit-scrollbar {
-  width: 0;
-}
-
-#news-list li {
-  text-decoration: none;
-  margin-bottom: 8px;
-  color: #cccccc;
-}
-
-#news-list a {
-  text-decoration: none;
-  color: #ffffff;
-}
-
-/* Modpack Carousel */
-#modpack-carousel h2 {
-  font-size: 1.2em;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #ffffff;
-}
-
-#modpack-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  max-height: 300px;
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  padding-right: 10px; /* Space for hidden scrollbar */
-  overflow: hidden; /* Hide scrollbars */
-}
-
-.modpack-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: rgba(255, 255, 255, 0.05);
+  margin-bottom: 20px;
   padding: 15px;
+  background-color: #3c3c3c;
   border-radius: 8px;
-  transition: transform 0.3s ease;
-  scroll-snap-align: start;
-  position: relative;
+  text-align: center;
 }
 
-.modpack-item:hover {
-  transform: scale(1.02);
-}
-
-.modpack-logo {
+.profile-card img {
   width: 50px;
   height: 50px;
-  border-radius: 5px;
-}
-
-.separator {
-  width: 2px;
-  height: 40px;
-  background-color: rgba(200, 200, 200, 0.2);
-  margin: 0 10px;
-}
-
-.modpack-name {
-  flex-grow: 1;
-  font-size: 1.1em;
-  color: #ffffff;
-  text-align: left;
-  padding-left: 10px;
-}
-.play-button {
-  padding: 10px 20px;
-  background-color: #357ae8; /* Initial blue color */
-  color: #ffffff;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s ease; /* Smooth transition */
-}
-
-.play-button:hover {
-  background-color: #4caf50;
-  transform: scale(1.02);
-}
-
-/* Hide Scrollbar */
-#modpack-list::-webkit-scrollbar {
-  width: 0;
-}
-
-/* Terminal Output Section */
-.terminal-card {
-  width: 100%;
-  padding: 15px;
-  background-color: #1a1a1a;
-  color: #00ff00;
-  border-radius: 8px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.5em;
-  max-height: 200px;
-  overflow-y: auto;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-#terminal-text {
-  white-space: pre-wrap;
-  line-height: 1.4;
-  font-size: 1ch;
-  padding: 10px;
-  background-color: transparent;
-  overflow: hidden; /* Hide scrollbars */
-}
-
-/* Terminal Card Styling */
-#launcher-terminal {
-  height: 150px; /* Set the fixed height */
-  overflow-y: auto; /* Enable scrolling within the terminal */
-  background-color: #0f0f0f;
-  color: #00ff00;
-  font-family: monospace;
-  font-size: 0.9em;
-  padding: 10px;
-  border-radius: 8px;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.5);
-  margin-top: 10px;
-  overflow: hidden;
-}
-
-/* Meteor Styling */
-.meteor {
-  position: fixed;
-  top: -10px;
-  width: 3px;
-  height: 100px;
-  background: linear-gradient(to bottom, #ffffff, #ffffff);
   border-radius: 50%;
-  opacity: 0;
-  animation: fall linear;
-  z-index: 1;
+  margin-bottom: 10px;
 }
 
-/* Animation for meteors */
-@keyframes fall {
-  0% {
-    transform: translateY(-100px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(120vh);
-    opacity: 0;
-  }
-}
-
-#version-card.update-available {
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-  color: #ffffff;
+  transition: background-color 0.3s;
+}
+
+.menu-item:hover {
+  background-color: #444;
+}
+
+.menu-item.active {
   background-color: #357ae8;
 }
 
-#version-card.update-available:hover {
-  background-color: #4caf50;
+.menu-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
 }
 
-#top-cards {
-  display: flex;
-  justify-content: space-evenly;
-  width: 100%;
-  height: 20%;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-/* Individual Top Cards */
-.top-card {
-  flex: 1;
-  padding: 5px; /* Reduced padding */
-  height: 40px; /* Set smaller height */
-  border-radius: 6px;
-  background-color: rgba(37, 37, 37, 0.9);
-  color: #ffffff;
+.version-display {
+  margin-top: auto;
+  font-size: 0.9em;
+  color: #ccc;
   text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s ease;
-}
-
-#version-card {
-  width: 80px;
-}
-
-.update-available {
-  cursor: pointer;
-  font-weight: bold;
-  color: #ffffff;
-}
-
-#title-card {
-  flex: 2;
-  margin-right: 100px;
-}
-
-#settings-card {
-  width: 80px;
-}
-
-.top-card:hover {
-  transform: scale(1.05);
 }

@@ -4,10 +4,70 @@
   <meta charset="UTF-8">
   <title>Settings</title>
   <link rel="stylesheet" href="../styles/settings.css">
+  <style>
+    /* Styling adjustments for the new UI design */
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: 'Open Sans', sans-serif;
+      padding: 1rem;
+    }
+    .card {
+      background-color: #2b2b2b;
+      border: 1px solid #3a3a3a;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .card h2, .card h3 {
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .card p {
+      font-size: 0.9rem;
+      color: #d1d1d1;
+    }
+    #back-button {
+      background-color: #333;
+      color: #ffffff;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+    #back-button:hover {
+      background-color: #444;
+    }
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    #memory-slider {
+      width: 100%;
+      margin: 0.5rem 0;
+    }
+    #apply-skin-button {
+      background-color: #444;
+      color: #ffffff;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    #apply-skin-button:hover {
+      background-color: #555;
+    }
+    #skin-preview-container {
+      background-color: #3a3a3a;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
   <div>
-    <button id="back-button">Back</button>
     
     <div class="card">
       <h2>Settings</h2>
@@ -16,7 +76,7 @@
     <!-- Java Settings Section -->
     <div class="card">
       <h3>Java Path Directory</h3>
-      <p>Java paths are completely automatic within V2, the launcher will automatically fetch the version of java it needs.</p>
+      <p>Java paths are completely automatic within V2, the launcher will automatically fetch the version of Java it needs.</p>
     </div>
     <div class="card">
       <h3>Minecraft Memory Allocation</h3>
@@ -29,9 +89,8 @@
         <span>Manual</span>
       </label>
       <p id="memory-info-text" class="hidden"></p>
-      <p style="font-size: .8rem; padding-top: .5rem;">*In automatic mode, system ram may be lower than expected due to windows allocation rules.</p>
+      <p style="font-size: .8rem; padding-top: .5rem;">*In automatic mode, system RAM may be lower than expected due to Windows allocation rules.</p>
 
-    
       <!-- Memory Slider for Manual Mode -->
       <div id="memory-slider-container" class="hidden">
         <input type="range" id="memory-slider" min="4" max="16" step="2">
@@ -41,9 +100,9 @@
     <div class="card">
       <div class="settings-section">
         <h3>Change Minecraft Skin</h3>
-        <p style="font-size: 1.5ch;">Classic (Steve) Format skins are only accepted currently. Skin preview can take up to 24hrs to update</p>
-        <div id="skin-preview-container"> <!-- Changed id for the container -->
-          <img id="skin-preview" src="" alt="Player Skin Preview" style="width: auto; height: 100;">
+        <p style="font-size: 0.8rem;">Classic (Steve) Format skins are only accepted currently. Skin preview can take up to 24hrs to update.</p>
+        <div id="skin-preview-container">
+          <img id="skin-preview" src="" alt="Player Skin Preview" style="width: auto; height: 100px;">
         </div>
         <input type="file" id="skin-upload" accept=".png">
         <button id="apply-skin-button">Apply Skin</button>

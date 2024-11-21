@@ -2,33 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Old Launcher Folder Detected</title>
+  <title>RCG Version 1 Detected | Do you want to erase the files and free up space?</title>
   <link rel="stylesheet" href="../styles/ozymandias.css">
+  <script src="https://w.soundcloud.com/player/api.js"></script>
 </head>
 <body>
   <div id="ozymandias-container">
-    <img id="ozymandias-image" src="../assets/ozymandias.png" alt="Ozymandias Image">
-    <p style="font-style: italic;">My name is Ozymandias, king of kings:
-        Look on my works, ye Mighty, and despair...</p>
-    <div id="ozymandias-text">
-      RCGLauncher v1's AppData folder has been detected. Would you like to remove it?
+    <div id="entry-text"></div>
+    <div id="heart-container">
+      <img id="player-heart" src="../assets/heart.png" alt="Player Heart" style="display: none;">
     </div>
-    <div id="button-container">
-      <button class="ozymandias-button remove" onclick="handleRemove()">Remove</button>
-      <button class="ozymandias-button keep" onclick="handleKeep()">Keep</button>
+    <div id="button-container" style="display: none;">
+      <button id="delete-box" class="action-button">
+        <img src="../assets/delete-icon.png" alt="Delete" class="button-image">
+      </button>
+      <button id="save-box" class="action-button">
+        <img src="../assets/save-icon.png" alt="Save" class="button-image">
+      </button>
     </div>
+    <iframe 
+    id="soundcloud-player" 
+    width="0" 
+    height="0" 
+    scrolling="no" 
+    frameborder="no" 
+    allow="autoplay"
+    src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/250947228&auto_play=true&hide_related=false&show_comments=false&show_user=false&show_reposts=false&visual=false">
+    </iframe>
   </div>
-
-  <script>
-    const { ipcRenderer } = require('electron');
-
-    function handleRemove() {
-      ipcRenderer.send('remove-old-launcher-folder');
-    }
-
-    function handleKeep() {
-      ipcRenderer.send('skip-old-launcher-folder');
-    }
-  </script>
+  <script src="../renderer/player.js"></script>
+  <script src="../renderer/ozymandias.js" defer></script>
 </body>
 </html>
+
+
+
+
+
+<!-- <script src="https://w.soundcloud.com/player/api.js"></script>
+
+<iframe 
+id="soundcloud-player" 
+width="0" 
+height="0" 
+scrolling="no" 
+frameborder="no" 
+allow="autoplay"
+src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/250947228&auto_play=true&hide_related=false&show_comments=false&show_user=false&show_reposts=false&visual=false">
+</iframe>
+
+<script src="../renderer/player.js"></script> -->

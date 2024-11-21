@@ -1,0 +1,62 @@
+#patchnotes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, .2fr));
+    gap: 16px;
+    padding: 16px;
+  }
+  
+.grid-item {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+    max-height: 350px;
+    text-align: left;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: pointer;
+}
+  
+.grid-item:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+  
+.grid-item img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-bottom: 1px solid #2c2c2c; /* Optional: Adds a separator below the image */
+    cursor: pointer;
+}
+  
+.grid-item-content {
+    padding: 12px;
+    cursor: pointer;
+}
+  
+.grid-item-content h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    cursor: pointer;
+}
+  
+.grid-item-content p {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #cccccc;
+    margin: 0;
+    cursor: pointer;
+}
+
+#patch-header {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+  }
+  

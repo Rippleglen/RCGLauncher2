@@ -1,49 +1,254 @@
-<!DOCTYPE html>
-<html lang="en">
+<html class="size-full">
 <head>
   <meta charset="UTF-8">
-  <title>RCGLauncher 2 | Home</title>
-  <link rel="stylesheet" href="../styles/landing.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/0d11f7e939.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+  <style>
+    body, html, .flex-1 {
+      margin: 0;
+      padding: 0;
+      border: none;
+      box-sizing: border-box;
+    }
+
+    .button {
+      background-color: #1e1e1e;
+      border-top: 2px solid #3a3a3a;
+      border-bottom: 2px solid #111;
+      display: flex;
+      align-items: center;
+      padding: 6px 12px; /* Adjust padding if necessary */
+      font-size: 1rem; /* Increase font size */
+      line-height: 1; /* Ensure line height does not expand the button vertically */
+      font-weight: 400;
+      transition: all 0.2s ease;
+    }
+
+
+    .button i, .button img {
+      margin-right: 12px;
+      font-size: 0.85rem;
+    }
+
+    .button:hover {
+      background-color: #333;
+    }
+
+    .button-pressed {
+      background-color: #1f1f1f;
+      border-top: 2px solid #111;
+      border-bottom: 2px solid #3a3a3a;
+      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.8);
+      font-weight: 700;
+    }
+
+    .nav-button {
+      background-color: transparent;
+      color: #c2cccb;
+      position: relative;
+      padding: 0 12px 8px;
+      font-size: 1.1rem;
+      font-weight: 400;
+      cursor: pointer;
+      border: none;
+      transition: color 0.2s ease;
+      text-align: left;
+    }
+
+    .nav-button:hover {
+      color: #ffffff;
+    }
+
+    .nav-button-active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .selection-bar {
+      position: absolute;
+      bottom: 0px;
+      height: 3px;
+      width: 20px; /* Fixed width for the selection bar */
+      background-color: #008542;
+      transition: left 0.3s ease;
+      pointer-events: none;
+    }
+
+
+    #horizontal-nav {
+      padding: 4px 4px 0 4px;
+      display: none;
+      opacity: 0;
+      transform: translateY(-50%);
+      transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+      position: relative;
+    }
+
+    #horizontal-nav.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    #content-area {
+      padding: 0;
+      background-color: #303030;
+      color: #e2e8f0;
+    }
+
+    .hero-image {
+      width: 100%;
+      height: 400px;
+      object-fit: cover;
+      margin: none;
+    }
+
+    #playbuttonimg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .play-button-container {
+      transform: translateY(-15px);
+      width: 250px;
+      height: 55px;
+      position: relative; /* Ensures the text and image are positioned relative to the container */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .play-button::after {
+      content: '';
+      position: absolute;
+      justify-content: center;
+      top: 0;
+      left: 0;
+      width: 95%;
+      height: 98%;
+      background-color: rgba(10, 152, 81, 0.192); /* White with transparency */
+      opacity: 0;
+      transition: opacity 0.3s ease; /* Smooth transition for hover */
+      pointer-events: none; /* Ensures the highlight doesn't interfere with interactions */
+      filter: hue-rotate(180deg);
+      mask-image: url(../assets/playbutton.png);
+    }
+
+    .play-button:hover::after {
+      opacity: 1; /* Becomes visible on hover */
+    }
+
+    .play-button {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .play-text {
+      position: relative;
+      z-index: 1; /* Ensures the text stays on top of the image */
+      color: #ffffff;
+      font-size: 1.2rem;
+      font-weight: 600;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: center;
+      background-color: #1e1e1e;
+    }
+  </style>
 </head>
-<body>
-  <div id="app">
-    <!-- Top Cards Section -->
-    <div id="top-cards">
-      <!-- Version Card -->
-      <div id="version-card" class="top-card">
-        <span id="version-text"></span> <!-- This will be dynamically updated with the version number -->
-      </div>
+<body style="background-color: #303030;" class="font-sans leading-normal tracking-normal h-screen flex">
+  <nav class="bg-[#1e1e1e] shadow-lg w-48 flex flex-col justify-between border-r-2 border-black">
+    <div>
+      <h1 class="text-2xl font-bold text-center mb-6 text-white">RCGLauncher</h1>
+      <a href="#" id="home-button" class="button text-white p-4 w-full" onclick="setActiveButton(this); loadHomeContent(), resetHorizontalNav()">
+        <i class="fa-solid fa-house"></i>
+        Home
+      </a>
+      <ul id="modpack-list" class="space-y-0 mt-2">
+        <!-- Modpack buttons will be dynamically injected here -->
+      </ul>
+    </div>
+    <div class="mt-auto space-y-px">
+      <a href="#" id="settings-button" class="button text-white p-4 w-full" onclick="setActiveButton(this); loadSettingsContent(), resetHorizontalNav()">
+        <i class="fa-solid fa-cog"></i>
+        Settings
+      </a>
+      <a href="#" class="button text-white p-4 w-full">
+        <i class="fa-solid fa-bell"></i>
+        What's New
+      </a>
+      <a href="#" id="logout-button" class="button text-white p-4 w-full">
+        <i class="fa-solid fa-sign-out-alt"></i>
+        Logout
+      </a>
       
-      <!-- Title Card -->
-      <div id="title-card" class="top-card">
-        <h1 style="font-size: 1.5ch;">RCGLauncher</h1>
+      <div id="version-info" class="text-gray-400 text-xs text-left mt-2 pl-2 pb-0.5"></div>
+    </div>
+  </nav>
+  <div class="flex-1 flex flex-col">
+    <header id="horizontal-nav" class="bg-[#1e1e1e] shadow-lg py-1 px-4 relative">
+      <h2 class="text-base font-semibold ml-2.5 pt-5 text-white tracking-wide" id="header-title">ModPackNameAcquire</h2>
+      <div class="flex justify-start space-x-2 relative" id="nav-container">
+        <button class="nav-button" onclick="setActiveNavButton(this); loadPlayContent()">Play</button>
+        <button class="nav-button" onclick="setActiveNavButton(this); loadSkinsContent()">Skins</button>
+        <button class="nav-button" onclick="setActiveNavButton(this); loadConfigurationContent()">Configuration</button>
+        <button class="nav-button" onclick="setActiveNavButton(this); loadPatchNotesContent()">Patch Notes</button>
       </div>
-      
-      <button id="settings-button" style="margin-top: -3px;" class="settings-button">
-        <div id="settings-card" class="top-card">
-          <img id="settings-burger" style="width: auto; height: 20px;" src="../assets/settingsbars.png" alt="">
+      <div id="selection-bar" class="selection-bar"></div>
+    </header>
+    
+    <div id="content-area" class="flex-1 bg-gray-800 p-4">
+      <div id="modpack-details" class="hidden">
+        <!-- Hero Image -->
+        <div id="herodiv">
+          <img id="modpack-hero" src="../assets/hero.png" alt="Modpack Hero" class="hero-image">
         </div>
-      </button>
-    </div>
 
-    <!-- News Section -->
-    <div class="card" id="news-section">
-      <h2>Latest News</h2>
-      <ul id="news-list"></ul>
-    </div>
+        <!-- Play Button -->
+        <div class="nav-container">
+          <div class="play-button-container">
+            <button id="play-modpack-button" class="play-button">Play <img src="../assets/playbutton.png" alt=""></button>
+          </div>
+        </div>
 
-    <!-- Modpack Carousel Section -->
-    <div class="card" id="modpack-carousel">
-      <h2>Fetched Modpacks:</h2>
-      <div id="modpack-list"></div>
-    </div>
-
-    <!-- Launcher Terminal Card -->
-    <div class="card" id="launcher-terminal">
-      <h2>Launcher Terminal</h2>
-      <!-- Messages will be appended here -->
+        <!-- Modpack Info -->
+        <div class="content-section">
+          <h1 id="modpack-title" class="text-xl font-semibold mb-4">Modpack Title</h1>
+          <p id="modpack-description">Details about the modpack will be displayed here.</p>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- Place your scripts at the end of the body for better loading -->
+  <script src="../public/js/skinview3d.bundle.js"></script>
   <script src="../renderer/landing.js"></script>
+  <script src="../renderer/skins.js"></script>
+  <script src="../renderer/configuration.js"></script>
+  <script src="../renderer/patchnotes.js"></script>
+
+
 </body>
 </html>

@@ -1,72 +1,86 @@
 /* General Styles */
 body {
-    margin: 0;
-    padding: 0;
-    background-color: #1e1e1e;
-    color: #d3d3d3;
-    font-family: Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-  }
-  
-  #ozymandias-container {
-    width: 90%;
-    max-width: 400px;
-    padding: 20px;
-    background-color: #292929;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.5);
-  }
-  
-  /* Image */
-  #ozymandias-image {
-    width: 50%;
-    height: auto;
-    max-width: 250px;
-    margin: 0 auto 5px;
-    border-radius: 8px;
-  }
-  
-  /* Text */
-  #ozymandias-text {
-    font-size: 1.1em;
-    margin: 150px 0 30px;
-  }
-  
-  /* Buttons */
-  #button-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  
-  .ozymandias-button {
-    padding: 10px 20px;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s;
-  }
-  
-  .ozymandias-button.remove {
-    background-color: #3a82f7;
-    color: #fff;
-  }
-  
-  .ozymandias-button.remove:hover {
-    background-color: #3170d6;
-  }
-  
-  .ozymandias-button.keep {
-    background-color: #c4c4c4;
-    color: #333;
-  }
-  
-  .ozymandias-button.keep:hover {
-    background-color: #a6a6a6;
-  }
-  
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  color: #d3d3d3;
+  font-family: Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+#ozymandias-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+}
+
+/* Text Entry Styles */
+#entry-text {
+  display: block;
+  color: #fff;
+  font-size: 1.5em;
+  text-align: center;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  width: 90%;
+  padding: 0px 60px 40px 60px;
+}
+
+#button-container {
+  display: flex;
+  justify-content: center;
+  gap: 80%;
+  padding-top: 20px;
+}
+
+.button-image {
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+}
+
+#save-box {
+  background: none;
+  border: none;
+}
+
+#delete-box {
+  background: none;
+  border: none;
+}
+
+#player-heart {
+  max-width: 30px;
+  max-height: 30px;
+  position: absolute;
+  bottom: 5%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+}
+
+/* Shaking Animation for Characters */
+.shaking-character {
+  display: inline-block;
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: 900;
+  animation-timing-function: ease-in-out;
+}
+
+/* Heart Sprite Styles */
+#heart-sprite {
+  width: 32px;
+  height: 32px;
+  background: url('../assets/heart-sprite.png') no-repeat center;
+  background-size: cover;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}

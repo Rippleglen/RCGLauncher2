@@ -1,0 +1,96 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .configuration-container {
+    max-width: 800px;
+    margin: 30px auto;
+    margin-top: 30px;
+  }
+
+  .configuration-container #config-header {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .header {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #00ff00; /* Optional: green color matching the screenshot */
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .input {
+    width: 100%;
+    background-color: #1c1c1c;
+    border: 1px solid #3c3c3c;
+    padding: 8px;
+    border-radius: 4px;
+    color: #ddd;
+  }
+  
+  .input:focus {
+    outline: none;
+    border-color: #00ff00;
+  }
+  
+  .input-group {
+    display: flex;
+  }
+  
+  .browse-button {
+    background-color: #3c3c3c;
+    border: none;
+    padding: 8px 12px;
+    color: #00ff00;
+    margin-left: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .browse-button:hover {
+    background-color: #00a000;
+  }
+  
+  .resolution-inputs {
+    display: flex;
+    align-items: center;
+  }
+  
+  .resolution-inputs .input {
+    width: 80px;
+  }
+  
+  .x-symbol {
+    margin: 0 10px;
+    color: #ddd;
+  }
+  
+  .toggle-button {
+    background-color: #3c3c3c;
+    border: none;
+    padding: 8px 12px;
+    color: #00ff00;
+    cursor: pointer;
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  .toggle-button:hover {
+    background-color: #00a000;
+  }
+  
+  textarea {
+    resize: vertical;
+    height: 100px;
+  }
+  

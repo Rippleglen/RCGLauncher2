@@ -1,0 +1,40 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration</title>
+  <link rel="stylesheet" href="../styles/configuration.css">
+</head>
+<body class="bg-gray-900 text-white p-6">
+  <div class="configuration-container">
+    <h1 id="config-header" style="padding-bottom: 10px;">Configuration</h1>
+
+    <hr width="100%" style="padding-bottom: 10px; background-color: #3d3d3d;" color="#3d3d3d">
+
+    <div class="form-group">
+        <label for="game-directory" class="label">MODPACK DIRECTORY</label>
+        <div class="input-group">
+            <input type="text" id="game-directory" class="input" value="<Loading...>" readonly>
+            <button class="browse-button">BROWSE</button>
+        </div>
+    </div>
+    
+
+    <div class="form-group">
+      <label for="java-executable" class="label">JAVA EXECUTABLE</label>
+      <div class="input-group">
+        <input type="text" id="java-executable" style="color: #444444;" class="input" value="<Using Fetched Java Runtime>" readonly>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="jvm-arguments" class="label">JVM ARGUMENTS</label>
+      <textarea id="jvm-arguments" class="input"></textarea>
+      <button id="save-jvm-arguments" class="browse-button">SAVE</button>
+      <p style="color: #686868;">To enable -XX:+UseLargePages, launch RCGLauncher as Administrator.</p>
+    </div>
+      
+  </div>
+  <script src="../renderer/configuration.js" defer></script>
+</body>
+</html>

@@ -1,54 +1,32 @@
-const { Client } = require('minecraft-launcher-core');
-const { ipcRenderer } = require('electron');
-const path = require('path');
-const fs = require('fs');  // Add fs module for file reading
-const { loadAuthData } = require('../auth/microsoftAuth');
-
-const configPath = path.join(require('os').homedir(), 'AppData', 'Roaming', '.RCGLauncher2', 'config.json');
-
-function loadConfig() {
-  if (fs.existsSync(configPath)) {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  }
-  return {};
-}
-
-// Load modpacks and setup the play button
-
-
 async function loadModpacks() {
-  const modpackList = document.getElementById('modpack-list');
-  modpackList.innerHTML = ''; // Clear existing modpack list
-
   try {
-    // Request modpack data from main.js
     const modpacks = await ipcRenderer.invoke('fetch-modpacks');
+    const modpackList = document.getElementById('modpack-list');
+    modpackList.innerHTML = ''; // Clear existing content
 
     modpacks.forEach(modpack => {
-      const modpackItem = document.createElement('div');
-      modpackItem.className = 'modpack-item';
-      modpackItem.id = modpack.id;
+      const modpackItem = document.createElement('a');
+      modpackItem.classList.add('button', 'text-white', 'p-4', 'w-full', 'flex', 'items-center');
+      modpackItem.href = '#';
+      modpackItem.onclick = () => {
+        setActiveButton(modpackItem);
+        loadIframe(`${modpack.id}.ejs`, false); // Load the .ejs page for the modpack
+        updateHeaderText(modpack.name); // Update the header with the modpack name
+      };
 
+      // Add modpack image as an icon
       const img = document.createElement('img');
       img.src = modpack.image;
-      img.alt = modpack.name;
-
-      const title = document.createElement('h3');
-      title.textContent = modpack.name;
-
-      const desc = document.createElement('p');
-      desc.textContent = modpack.description;
-
-      const playButton = document.createElement('button');
-      playButton.textContent = 'Play';
-      playButton.addEventListener('click', () => {
-        ipcRenderer.send('play-modpack', modpack);
-      });
+      img.alt = `${modpack.name} icon`;
+      img.classList.add('h-6', 'w-6', 'mr-3'); // Tailwind classes for sizing and margin
+      img.style.borderRadius = '4px'; // Rounded corners
 
       modpackItem.appendChild(img);
-      modpackItem.appendChild(title);
-      modpackItem.appendChild(desc);
-      modpackItem.appendChild(playButton);
+
+      // Add modpack name as text
+      const modpackName = document.createElement('span');
+      modpackName.textContent = modpack.name;
+      modpackItem.appendChild(modpackName);
 
       modpackList.appendChild(modpackItem);
     });
@@ -57,10 +35,11 @@ async function loadModpacks() {
   }
 }
 
+function updateHeaderText(modpackName) {
+  const headerElement = document.querySelector('header h2');
+  if (headerElement) {
+    headerElement.textContent = modpackName;
+  }
+}
+
 module.exports = { loadModpacks };
-
-
-
-module.exports = {
-  loadModpacks,
-};

@@ -1,86 +1,66 @@
-/* General Settings Styles */
-body {
-  font-family: Arial, sans-serif;
-  background-color: #1e1e1e;
-  color: #ffffff;
-  margin: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: row;
-  height: 150vh;
-}
-
+/* General Settings Container Styles */
 #settings-container {
-  width: 90%;
-  max-width: 450px;
+  flex: 1;
+  overflow-y: auto; /* Allow scrolling if needed */
+  background-color: transparent; /* Ensure it matches the main background */
+  display: none; /* Hidden by default */
+}
+
+#settings-container .settings-content {
   padding: 20px;
-  background-color: rgba(37, 37, 37, 0.9);
-  border-radius: 10px;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-  text-align: center;
   color: #ffffff;
-}
-
-#settings-container::-webkit-scrollbar { 
-  display: none;  /* Safari and Chrome */
-}
-
-body::-webkit-scrollbar { 
-  display: none;  /* Safari and Chrome */
 }
 
 /* Card Style */
-.card {
+#settings-container .settings-content .card {
   width: auto;
-  background-color: rgba(37, 37, 37, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 10px;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-  padding: 20px;
-  margin-bottom: 20px;
-  margin-top: 10px;
+  background-color: #1e1e1e; /* Match launcher background */
+  border-radius: 0; /* Remove rounded corners */
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: none; /* Remove shadows */
 }
 
-button {
+/* Button Style */
+#settings-container .settings-content button {
   background-color: #357ae8;
   color: white;
   border: none;
-  border-radius: 5px;
-  padding: 10px;
+  border-radius: 2px; /* Minimize border radius for consistency */
+  padding: 8px;
   cursor: pointer;
 }
 
-button:hover {
+#settings-container .settings-content button:hover {
   background-color: #4caf50;
 }
 
 /* Toggle Label Styles */
-.toggle-label {
+#settings-container .settings-content .toggle-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-weight: bold;
-  padding: 10px 0;
+  padding: 8px 0;
 }
 
-.toggle-label input[type="checkbox"] {
+#settings-container .settings-content .toggle-label input[type="checkbox"] {
   appearance: none;
   width: 50px;
   height: 24px;
   background-color: #ccc;
-  border-radius: 15px;
+  border-radius: 12px; /* Smaller radius */
   position: relative;
   cursor: pointer;
   outline: none;
   transition: background-color 0.3s ease;
 }
 
-.toggle-label input[type="checkbox"]:checked {
+#settings-container .settings-content .toggle-label input[type="checkbox"]:checked {
   background-color: #4caf50;
 }
 
-.toggle-label input[type="checkbox"]::before {
+#settings-container .settings-content .toggle-label input[type="checkbox"]::before {
   content: '';
   position: absolute;
   top: 2px;
@@ -92,38 +72,32 @@ button:hover {
   transition: transform 0.3s ease;
 }
 
-.toggle-label input[type="checkbox"]:checked::before {
+#settings-container .settings-content .toggle-label input[type="checkbox"]:checked::before {
   transform: translateX(26px);
 }
 
 /* Java Options Styles */
-.hidden {
+#settings-container .settings-content .hidden {
   display: none;
 }
 
-#skin-preview {
-  margin: 10px 0;
-  text-align: center;
-}
-
-#skin-preview {
-  display: block;
+#settings-container .settings-content #skin-preview {
   margin: 10px auto;
+  display: block;
   width: 64px;
   height: 128px;
 }
 
-#apply-skin-button {
-  padding: 10px;
+#settings-container .settings-content #apply-skin-button {
+  padding: 8px;
   background-color: #357ae8;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 2px; /* Minimal radius */
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-#apply-skin-button:hover {
+#settings-container .settings-content #apply-skin-button:hover {
   background-color: #4caf50;
 }
-

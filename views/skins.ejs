@@ -1,0 +1,43 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skins Manager</title>
+  <script src="../renderer/trustedtypes.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/0d11f7e939.js"></script>
+  <link rel="stylesheet" href="../styles/skins.css">
+</head>
+<body class="bg-gray-900 text-white p-6">
+    <div class="skins-container">
+        <!-- Left: Current Skin Preview -->
+        <div class="current-skin-section">
+          <h2 class="section-header">Current</h2>
+          <div id="current-skin-preview">
+            <canvas id="skin_container" width="200" height="400"></canvas>
+            <button id="refresh-skin-button" class="refresh-button">Refresh Skin</button>
+          </div>
+        </div>
+      
+        <!-- Separator -->
+        <div class="separator"></div>
+      
+        <!-- Right: Skins Library -->
+        <div class="library-section">
+          <h2 class="section-header">Library</h2>
+          <div id="skin-library" class="skin-library">
+            <!-- New Skin Button -->
+            <div class="add-skin-container" onclick="handleAddSkin()">
+              <div class="add-skin-button">
+                <i class="fa-solid fa-plus"></i>
+              </div>
+              <span class="add-skin-text">New Skin</span>
+            </div>
+            <!-- Existing skins will be dynamically added here -->
+          </div>      
+        </div>
+    </div>   
+  <script src="../public/js/skinview3d.bundle.js"></script>
+  <script src="../renderer/skins.js"></script>
+</body>
+</html>

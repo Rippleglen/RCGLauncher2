@@ -47,7 +47,7 @@ function setActiveButton(button) {
 function displayVersionInfo() {
   const versionInfo = document.getElementById('version-info');
   if (versionInfo) {
-    versionInfo.textContent = `Version: ${version}-Caramel`;
+    versionInfo.textContent = `Version: ${version}-Indigo`;
   }
 }
 

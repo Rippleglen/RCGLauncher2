@@ -93,7 +93,7 @@ function removeOutdatedFiles(localMetadata, serverMetadata, localFolderPath) {
 
 // Main synchronization function that uses the updated metadata format
 async function synchronizeFiles(metadata, modpackName, instancePath) {
-  const baseUrl = `https://cdn.andreasrp.com/rcg2/instances/${encodeURIComponent(modpackName)}/`;
+  const baseUrl = `https://cdn.ripple-co.io/rcg2/instances/${encodeURIComponent(modpackName)}/`;
   const localMetadataPath = path.join(instancePath, 'local_metadata.json');
 
   // Load local metadata if it exists
@@ -115,7 +115,7 @@ async function synchronizeFiles(metadata, modpackName, instancePath) {
 
 // Function to fetch metadata JSON from the server
 async function fetchMetadata(modpackName) {
-  const url = `https://cdn.andreasrp.com/rcg2/instances/${encodeURIComponent(modpackName)}/metadata.json`;
+  const url = `https://cdn.ripple-co.io/rcg2/instances/${encodeURIComponent(modpackName)}/metadata.json`;
   console.log(`Fetching metadata from: ${url}`);
 
   const response = await fetchWithDynamicImport(url);

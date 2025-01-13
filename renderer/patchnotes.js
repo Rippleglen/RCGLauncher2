@@ -83,7 +83,7 @@ async function loadPatchNotes() {
 async function fetchModpacksJSON() {
   try {
     const timestamp = new Date().getTime(); // Current timestamp
-    const response = await fetch(`https://cdn.andreasrp.com/rcg2/jsons/modpacks.json?ts=${timestamp}`);
+    const response = await fetch(`https://cdn.ripple-co.io/rcg2/jsons/modpacks.json?ts=${timestamp}`);
     return await response.json();
   } catch (error) {
     console.error('Error fetching modpacks.json:', error);

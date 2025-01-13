@@ -11,7 +11,7 @@ const { getJavaVersionForMinecraft, getJavaPathForMinecraftVersion } = require('
 const { Client } = require('minecraft-launcher-core');
 const configPath = path.join(app.getPath('appData'), '.RCGLauncher2', 'config.json');
 const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
-const MODPACKS_URL = 'https://cdn.andreasrp.com/rcg2/jsons/modpacks.json'; // Server location of modpacks.json
+const MODPACKS_URL = 'https://cdn.ripple-co.io/rcg2/jsons/modpacks.json'; // Server location of modpacks.json
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const { spawn } = require('child_process');
 const os = require('os');

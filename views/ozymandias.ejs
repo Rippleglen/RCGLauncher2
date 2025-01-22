@@ -5,8 +5,16 @@
   <title>RCG Version 1 Detected | Do you want to erase the files and free up space?</title>
   <link rel="stylesheet" href="../styles/ozymandias.css">
   <script src="https://w.soundcloud.com/player/api.js"></script>
+  <link rel="stylesheet" href="../styles/titlebar.css">
 </head>
 <body>
+  <div class="titlebar">
+    <div class="window-controls">
+      <button class="window-button" id="minimize">_</button>
+      <button class="window-button" id="maximize">☐</button>
+      <button class="window-button" id="close">X</button>
+    </div>
+  </div>
   <div id="ozymandias-container">
     <div id="entry-text"></div>
     <div id="heart-container">
@@ -32,6 +40,7 @@
   </div>
   <script src="../renderer/player.js"></script>
   <script src="../renderer/ozymandias.js" defer></script>
+  <script src="../components/windowControls.js"></script>
 </body>
 </html>
 

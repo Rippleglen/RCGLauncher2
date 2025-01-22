@@ -3,14 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RCGLauncher 2 | Login</title>
+  <title>RippleCo Modpack Launcher | Login</title>
   <link rel="stylesheet" href="../styles/welcome.css">
+  <link rel="stylesheet" href="../styles/titlebar.css">
 </head>
 <body>
+  <div class="titlebar">
+    <div class="window-controls">
+      <button class="window-button" id="minimize">_</button>
+      <button class="window-button" id="maximize">☐</button>
+      <button class="window-button" id="close">X</button>
+    </div>
+  </div>
   <div class="welcome-container">
+    
     <!-- Logo Section -->
     <div class="logo">
-      <img src="../assets/RCGLogo.png" alt="Launcher Logo">
+      <img src="../assets/RippleCoLogo.webp" alt="Launcher Logo">
     </div>
 
     <div class="title">
@@ -41,5 +50,6 @@
 
   <!-- Script for button functionality -->
   <script src="../renderer/welcome.js"></script>
+  <script src="../components/windowControls.js"></script>
 </body>
 </html>

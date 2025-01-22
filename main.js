@@ -13,16 +13,14 @@ const configPath = path.join(app.getPath('appData'), '.RCGLauncher2', 'config.js
 const appDataPath = path.join(app.getPath('appData'), '.RCGLauncher2');
 const MODPACKS_URL = 'https://cdn.ripple-co.io/rcg2/jsons/modpacks.json'; // Server location of modpacks.json
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const { spawn } = require('child_process');
 const os = require('os');
-const { fetchMetadata, synchronizeFiles } = require('./components/metadataSync');
+const { fetchMetadata, synchronizeFiles, syncModpackFiles, eventEmitter } = require('./components/metadataSync');
 const RSSParser = require('rss-parser');
 const rssParser = new RSSParser();
 const RSS_URL = 'https://snuggledtogetherblog.wordpress.com/feed/'
 const { autoUpdater, AppUpdater } = require("electron-updater")
 const oldLauncherFolder = path.join(app.getPath('appData'), '.rcglauncher');
 const packageJson = require('./package.json');
-const { exec } = require('child_process');
 
 
 let mainWindow;
@@ -47,6 +45,7 @@ autoUpdater.autoInstallOnAppQuit = true;
 //   app.whenReady().then(createWindow);
 // }
 
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     minWidth: 1470,
@@ -56,43 +55,63 @@ async function createWindow() {
       contextIsolation: false,
       nodeIntegrationInSubFrames: true,
     },
-    resizable: true
+    resizable: true,
+    center: true,
+    frame: false
   });
-
+ 
   mainWindow.setMenuBarVisibility(false);
-  setupUpdateHandlers();
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.send('app-version', packageJson.version);
-  });
-
-  try {
-    // Attempt to get valid authentication data
-    const authData = await getValidAuthData(appDataPath);
-
-    // If successful, load the landing page
-    mainWindow.loadFile('views/landing.ejs');
-    
-  } catch (error) {
-    console.error('Authentication error:', error.message);
-
-    // If there's an error (e.g., no auth data), load the welcome/login page
-    mainWindow.loadFile('views/welcome.ejs');
+  mainWindow.loadFile('views/splash.ejs');
+ 
+  const isDev = false
+  console.log (isDev);
+ 
+  async function navigateToMainPage() {
+    try {
+      const authData = await getValidAuthData(appDataPath);
+      mainWindow.loadFile('views/landing.ejs');
+    } catch (error) {
+      mainWindow.loadFile('views/welcome.ejs');
+    }
+  }
+ 
+  if (isDev) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    mainWindow.webContents.send('status', { text: 'Development mode - skipping updates', progress: 90 });
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await navigateToMainPage();
+  } else {
+    autoUpdater.on('checking-for-update', () => {
+      mainWindow.webContents.send('status', { text: 'Checking for updates...', progress: 20 });
+    });
+ 
+    autoUpdater.on('update-available', () => {
+      mainWindow.webContents.send('status', { text: 'Update available, downloading...', progress: 40 });
+    });
+ 
+    autoUpdater.on('download-progress', (progress) => {
+      mainWindow.webContents.send('status', {
+        text: 'Downloading update...',
+        progress: 40 + (progress.percent * 0.5)
+      });
+    });
+ 
+    autoUpdater.on('update-not-available', async () => {
+      mainWindow.webContents.send('status', { text: 'Starting launcher...', progress: 90 });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await navigateToMainPage();
+    });
+ 
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      console.error('Update check failed:', error);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await navigateToMainPage();
+    }
   }
 }
 
-function setupUpdateHandlers() {
-  autoUpdater.on('update-available', () => {
-    mainWindow.webContents.send('update-available');
-  });
-
-  autoUpdater.on('update-downloaded', () => {
-    mainWindow.webContents.send('update-ready');
-  });
-
-  // Start checking for updates
-  autoUpdater.checkForUpdatesAndNotify();
-}
 
 function simulateUpdate() {
   console.log("Recieved update msg")
@@ -109,18 +128,9 @@ function checkForOldLauncherFolder() {
   if (fs.existsSync(oldLauncherFolder)) {
     mainWindow.loadFile('views/ozymandias.ejs');
   } else {
-    mainWindow.loadFile('views/landing.ejs'); // or the main page of the launcher
   }
 }
 
-async function initiateJavaDownload(version) {
-  try {
-    await downloadJava(version);
-    console.log(`Java ${version} downloaded successfully!`);
-  } catch (error) {
-    console.error('Error downloading Java:', error);
-  }
-}
 
 // Function to send messages to the renderer process
 function sendToRenderer(channel, message) {
@@ -148,6 +158,7 @@ app.on('web-contents-created', (event, webContents) => {
 
 // Example of logging an error and sending it to the renderer
 async function fetchModpacks() {
+  checkForOldLauncherFolder();
   console.log(`Fetching modpacks`);
   try {
     const response = await fetch(MODPACKS_URL);
@@ -198,10 +209,9 @@ function loadConfig() {
 }
 
 app.whenReady().then(async () => {
-  ensureConfigFile(); // Ensure config file exists
+  ensureConfigFile();
   await createWindow();
-  setupMicrosoftAuth(mainWindow, appDataPath); // Pass appDataPath to microsoftAuth
-  autoUpdater.checkForUpdates(),
+  setupMicrosoftAuth(mainWindow, appDataPath);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -363,6 +373,12 @@ async function launchModpack(modpack, javaPath) {
       console.log(`Created instance directory for modpack: ${instancePath}`);
     }
 
+    // New sync code
+    console.log('Syncing modpack files...');
+    await syncModpackFiles(modpack, instancePath);
+    console.log('File synchronization complete');
+
+    // Rest of your launch code remains the same
     const jvmArgsFilePath = path.join(appDataPath, 'launcher', `${modpack.name.replace(/\s+/g, '')}jvmargs.json`);
     let jvmArgsArray = [];
 
@@ -404,8 +420,34 @@ async function launchModpack(modpack, javaPath) {
 
     console.log('Launching modpack with options:', options);
     launcher.launch(options);
+    launcher.on('download-status', (data) => {
+      const { current, total, type } = data;
+      const progress = (current / total) * 100;
+      mainWindow.webContents.send('launcher-progress', {
+        progress,
+        status: `Downloading ${type}: ${current}/${total}`
+      });
+    });
+
+    launcher.on('download', (progress) => {
+      mainWindow.webContents.send('launcher-progress', {
+        progress: progress * 100,
+        status: 'Downloading game files...'
+      });
+    });
+
+    launcher.on('unzip', (progress) => {
+      mainWindow.webContents.send('launcher-progress', {
+        progress: progress * 100,
+        status: 'Extracting game files...'
+      });
+    });
+
     launcher.on('debug', (e) => {
       console.log('[DEBUG]', e);
+      if (e.includes('Done')) {
+        mainWindow.webContents.send('launcher-complete');
+      }
     });
 
     launcher.on('data', (e) => {
@@ -594,5 +636,36 @@ ipcMain.handle('open-file-dialog', async (event, options) => {
 ipcMain.on('navigate-to-welcome', (event) => {
   const welcomePath = path.join(__dirname, 'views', 'welcome.ejs'); // Adjust path as needed
   mainWindow.loadFile(welcomePath);
+});
+
+
+
+// Add these event listeners after creating the main window
+eventEmitter.on('download-status', (status) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('download-progress', status);
+  }
+});
+
+eventEmitter.on('download-error', (error) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('launch-error', error);
+  }
+});
+
+ipcMain.on('window-minimize', () => {
+  mainWindow.minimize();
+});
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
+  }
+});
+
+ipcMain.on('window-close', () => {
+  app.quit();
 });
 

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../styles/titlebar.css">
+    <title>RippleCo Modpack Launcher</title>
+</head>
+<body>
+  <div class="titlebar">
+    <div class="window-controls">
+      <button class="window-button" id="minimize">_</button>
+      <button class="window-button" id="maximize">☐</button>
+      <button class="window-button" id="close">X</button>
+    </div>
+  </div>
+    <!-- splash.ejs -->
+    <div class="splash-screen">
+        <img src="../assets/RippleCoLogo.webp" class="splash-logo">
+        <div class="spinner"></div>
+        <div class="status-text" id="status-text">Contacting RippleCo PostmanAPI...</div>
+    </div>
+      
+    <style>
+      *{
+        margin: 0;
+        padding: 0;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #404040;
+        border-radius: 50%;
+        border-top-color: #4d97ec;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+      .splash-screen {
+        background: #1e1e1e;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-family: Arial, Helvetica, sans-serif;
+        font-weight: bold;
+      }
+      
+      .splash-logo {
+        width: 200px;
+        margin-bottom: 30px;
+      }
+      
+      .splash-progress {
+        width: 200px;
+        height: 4px;
+        background: #404040;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+    
+    </style>
+    <script src="../renderer/splash.js"></script>
+    <script src="../components/windowControls.js"></script>
+    
+</body>
+</html>
+
+
+

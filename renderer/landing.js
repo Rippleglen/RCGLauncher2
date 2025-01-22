@@ -1,6 +1,10 @@
 const { ipcRenderer } = require('electron');
 const { version } = require('../package.json');
 const { cachePage, getCachedPage } = require('../renderer/cacheManager');
+let loadingOverlay = null;
+let progressFill = null;
+let progressText = null;
+let statusText = null;
 
 let currentlySelectedPack = null;
 let modpackDirectoryPath = null;
@@ -25,16 +29,106 @@ async function loadEJSContent(page, callback) {
 function bindPlayButton() {
   const playButton = document.getElementById('play-modpack-button');
   if (playButton) {
-      playButton.onclick = () => {
-          if (currentlySelectedPack) {
-              ipcRenderer.send('play-modpack', currentlySelectedPack);
-              console.log(`Playing modpack: ${currentlySelectedPack.name}`);
-          } else {
-              console.error('No modpack selected to play.');
-          }
-      };
+    playButton.onclick = () => {
+      if (currentlySelectedPack) {
+        showLoadingOverlay();
+        ipcRenderer.send('play-modpack', currentlySelectedPack);
+        console.log(`Playing modpack: ${currentlySelectedPack.name}`);
+      } else {
+        console.error('No modpack selected to play.');
+      }
+    };
   }
 }
+
+function showProgress() {
+  const progressContainer = document.getElementById('downloadProgress');
+  const statusElement = document.getElementById('downloadStatus');
+  if (progressContainer) progressContainer.style.display = 'block';
+  if (statusElement) statusElement.style.display = 'block';
+}
+
+function hideProgress() {
+  const progressContainer = document.getElementById('downloadProgress');
+  const statusElement = document.getElementById('downloadStatus');
+  if (progressContainer) progressContainer.style.display = 'none';
+  if (statusElement) statusElement.style.display = 'none';
+}
+
+function updateProgress(progress, status) {
+  // Update progress bar under play button
+  const progressBar = document.getElementById('progressBar');
+  const statusElement = document.getElementById('downloadStatus');
+  
+  if (progressBar && statusElement) {
+    progressBar.style.width = `${progress}%`;
+    statusElement.textContent = status;
+  }
+
+  // Update loading overlay progress
+  if (progressFill && progressText && statusText) {
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `${Math.round(progress)}%`;
+    if (status) {
+      statusText.textContent = status;
+    }
+  }
+}
+
+// Add these IPC listeners
+ipcRenderer.on('download-progress', (event, { progress, status }) => {
+  showProgress();
+  updateProgress(progress, status);
+});
+
+ipcRenderer.on('launcher-progress', (event, { progress, status }) => {
+  showProgress();
+  updateProgress(progress, status);
+});
+
+ipcRenderer.on('launcher-complete', () => {
+  hideProgress();
+});
+
+ipcRenderer.on('launch-error', (event, error) => {
+  const statusElement = document.getElementById('downloadStatus');
+  if (statusElement) {
+    statusElement.textContent = `Error: ${error}`;
+    statusElement.style.color = '#ff4444';
+  }
+  setTimeout(hideProgress, 3000);
+});
+
+function showLoadingOverlay() {
+  loadingOverlay = document.getElementById('loadingOverlay');
+  progressFill = document.getElementById('progressFill');
+  progressText = document.getElementById('progressText');
+  statusText = document.getElementById('statusText');
+  
+  loadingOverlay.style.display = 'flex';
+}
+
+
+function hideLoadingOverlay() {
+  if (loadingOverlay) {
+    loadingOverlay.style.display = 'none';
+  }
+}
+
+// Add IPC listeners for progress updates
+ipcRenderer.on('download-progress', (event, { progress, status }) => {
+  updateProgress(progress, status);
+});
+
+ipcRenderer.on('launch-complete', () => {
+  hideLoadingOverlay();
+});
+
+ipcRenderer.on('launch-error', (event, error) => {
+  statusText.textContent = `Error: ${error}`;
+  progressFill.style.backgroundColor = '#ff4444';
+  setTimeout(hideLoadingOverlay, 3000);
+});
 
 // Function to set the active button
 function setActiveButton(button) {
@@ -47,7 +141,7 @@ function setActiveButton(button) {
 function displayVersionInfo() {
   const versionInfo = document.getElementById('version-info');
   if (versionInfo) {
-    versionInfo.textContent = `Version: ${version}-Indigo`;
+    versionInfo.textContent = `Version: ${version}-Gravitas`;
   }
 }
 
@@ -122,6 +216,15 @@ function displayModpackDetails(modpack) {
                   <img id="playbuttonimg" src="../assets/playbutton.png">
                 </button>
               </div>
+          </div>
+          <div class="loading-overlay" id="loadingOverlay">
+            <div class="progress-container">
+              <div class="status-text" id="statusText">Preparing to launch...</div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-text" id="progressText">0%</div>
+            </div>
           </div>
           <div class="content-section">
               <h1 id="modpack-title" class="text-xl font-semibold mb-4">${modpack.name}</h1>

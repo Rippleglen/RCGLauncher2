@@ -1,14 +1,27 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const extract = require('extract-zip');
+const os = require('os');
+const { app } = require('electron');
+const events = require('events');
+const eventEmitter = new events.EventEmitter();
 
-// Fetch function to handle the download
+const API_BASE = 'https://launcherapi.ripple-co.io';
+
+const MANAGED_DIRECTORIES = {
+  mods: 'mods',
+  config: 'config',
+  resourcepacks: 'resourcepacks',
+  shaderpacks: 'shaderpacks',
+  ffmpeg: 'ffmpeg'
+};
+
 async function fetchWithDynamicImport(url) {
   const fetch = (await import('node-fetch')).default;
   return fetch(url);
 }
 
-// Function to calculate SHA-256 hash of a file
 function calculateFileHash(filePath) {
   const fileBuffer = fs.readFileSync(filePath);
   const hashSum = crypto.createHash('sha256');
@@ -16,107 +29,204 @@ function calculateFileHash(filePath) {
   return hashSum.digest('hex');
 }
 
-// Function to download a file from a URL to a local destination
-async function downloadFile(url, destination) {
-  console.log(`Downloading file: ${url} to ${destination}`);
-  const response = await fetchWithDynamicImport(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download file from ${url}`);
+async function getLocalModsList(instancePath) {
+  const modsPath = path.join(instancePath, 'mods');
+  const mods = {};
+  
+  if (fs.existsSync(modsPath)) {
+    const files = await fs.promises.readdir(modsPath);
+    for (const file of files) {
+      const filePath = path.join(modsPath, file);
+      if (fs.lstatSync(filePath).isFile()) {
+        mods[file] = await calculateFileHash(filePath);
+      }
+    }
   }
-
-  const buffer = await response.arrayBuffer();
-  fs.writeFileSync(destination, Buffer.from(buffer));
-  console.log(`Downloaded file to ${destination}`);
+  
+  return mods;
 }
 
-// Recursive function to process and sync only tracked files in metadata
-async function processMetadataRecursively(folderMetadata, localFolderPath, remoteFolderPath) {
-  // Ensure the local folder path exists
-  if (!fs.existsSync(localFolderPath)) {
-    fs.mkdirSync(localFolderPath, { recursive: true });
+async function syncModpackFiles(modpack, instancePath) {
+  try {
+    console.log(`Starting sync for modpack: ${modpack.name}`);
+
+    // Get all current local files
+    const currentFiles = await getLocalFilesList(instancePath);
+    
+    // Check with server
+    const checkResponse = await fetch(`${API_BASE}/mods/check`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        modpack: modpack.name,
+        clientFiles: currentFiles
+      })
+    });
+
+    if (!checkResponse.ok) {
+      throw new Error(`Failed to check files: ${checkResponse.statusText}`);
+    }
+
+    const { needsUpdate, changes } = await checkResponse.json();
+    
+    if (needsUpdate) {
+      console.log('Updates needed, preparing download...');
+      
+      // Request package preparation
+      const prepareResponse = await fetch(`${API_BASE}/mods/prepare`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          modpack: modpack.name,
+          changes: changes
+        })
+      });
+
+      if (!prepareResponse.ok) {
+        throw new Error('Failed to prepare package');
+      }
+
+      const { packageId, downloadUrl } = await prepareResponse.json();
+      
+      // Download and extract package
+      await downloadAndExtractPackage(`${API_BASE}${downloadUrl}`, instancePath, packageId);
+
+      console.log('Sync completed successfully');
+    } else {
+      console.log('Files are up to date');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Sync failed:', error);
+    throw error;
   }
+}
 
-  // Process each entry in the metadata
-  for (const [entryName, entryValue] of Object.entries(folderMetadata)) {
-    const localEntryPath = path.join(localFolderPath, entryName);
-    const remoteEntryUrl = `${remoteFolderPath}/${entryName}`;
+async function downloadAndExtractPackage(downloadUrl, instancePath, packageId) {
+  const tempPath = path.join(os.tmpdir(), `modpack-${Date.now()}.zip`);
+  let fileStream = null;
+  
+  try {
+    const infoResponse = await fetch(`${API_BASE}/download/${packageId}/info`);
+    if (!infoResponse.ok) throw new Error('Failed to get package info');
+    
+    const { totalSize, chunkSize, totalChunks } = await infoResponse.json();
+    
+    // Create the write stream
+    fileStream = fs.createWriteStream(tempPath);
+    
+    eventEmitter.emit('download-status', {
+      progress: 0,
+      status: 'Starting download...'
+    });
 
-    if (typeof entryValue === 'string') {
-      // Entry is a file with its hash
-      try {
-        // Check if the file exists and matches the expected hash
-        if (fs.existsSync(localEntryPath) && fs.lstatSync(localEntryPath).isFile()) {
-          const localFileHash = calculateFileHash(localEntryPath);
-          if (localFileHash === entryValue) {
-            console.log(`File ${entryName} is up-to-date.`);
-            continue;
+    console.log(`Downloading ${totalChunks} chunks...`);
+    
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const response = await fetch(`${API_BASE}/download/${packageId}/chunk/${chunkIndex}`);
+      if (!response.ok) throw new Error(`Failed to download chunk ${chunkIndex}`);
+      
+      const buffer = await response.arrayBuffer();
+      
+      // Write chunk to file
+      await new Promise((resolve, reject) => {
+        fileStream.write(Buffer.from(buffer), error => {
+          if (error) reject(error);
+          const progress = ((chunkIndex + 1) / totalChunks) * 100;
+          eventEmitter.emit('download-status', {
+            progress,
+            status: `Downloaded chunk ${chunkIndex + 1}/${totalChunks}`
+          });
+          resolve();
+        });
+      });
+    }
+
+    // Close the file stream
+    await new Promise((resolve, reject) => {
+      fileStream.end(err => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    
+    eventEmitter.emit('download-status', {
+      progress: 100,
+      status: 'Extracting files...'
+    });
+
+    console.log('Download complete, extracting...');
+    await extract(tempPath, { dir: instancePath });
+    console.log('Extraction complete');
+
+    eventEmitter.emit('download-status', {
+      progress: 100,
+      status: 'Launch ready!'
+    });
+
+    // Notify server for cleanup
+    await fetch(`${API_BASE}/mods/cleanup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packageId })
+    });
+
+  } catch (error) {
+    eventEmitter.emit('download-error', error.message);
+    throw error;
+  } finally {
+    if (fileStream) {
+      fileStream.end();
+    }
+    if (fs.existsSync(tempPath)) {
+      fs.unlinkSync(tempPath);
+    }
+  }
+}
+
+async function getLocalFilesList(instancePath) {
+  const files = {};
+  
+  for (const [dirType, dirPath] of Object.entries(MANAGED_DIRECTORIES)) {
+    files[dirType] = {};
+    const fullPath = path.join(instancePath, dirPath);
+    
+    if (fs.existsSync(fullPath)) {
+      // Get files recursively including subdirectories
+      const getFilesRecursively = async (dir, baseDir = dir) => {
+        const results = {};
+        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          const relativePath = path.relative(baseDir, fullPath);
+          
+          if (entry.isDirectory()) {
+            const subResults = await getFilesRecursively(fullPath, baseDir);
+            Object.assign(results, subResults);
           } else {
-            console.log(`File ${entryName} is outdated. Updating...`);
+            results[relativePath] = await calculateFileHash(fullPath);
           }
-        } else {
-          console.log(`File ${entryName} is missing. Downloading...`);
         }
+        
+        return results;
+      };
 
-        // Download the file if it’s missing or outdated
-        await downloadFile(remoteEntryUrl, localEntryPath);
-      } catch (error) {
-        console.error(`Error processing file ${entryName}:`, error);
-      }
-    } else if (typeof entryValue === 'object') {
-      // Entry is a directory, so recurse
-      await processMetadataRecursively(entryValue, localEntryPath, remoteEntryUrl);
+      files[dirType] = await getFilesRecursively(fullPath);
     }
   }
+  
+  return files;
 }
 
-// Function to remove outdated files based on the comparison of local and server metadata
-function removeOutdatedFiles(localMetadata, serverMetadata, localFolderPath) {
-  for (const [entryName, entryValue] of Object.entries(localMetadata)) {
-    const localEntryPath = path.join(localFolderPath, entryName);
-
-    if (!serverMetadata.hasOwnProperty(entryName)) {
-      if (fs.existsSync(localEntryPath)) {
-        if (fs.lstatSync(localEntryPath).isFile()) {
-          fs.unlinkSync(localEntryPath);
-          console.log(`Removed outdated file: ${localEntryPath}`);
-        } else if (fs.lstatSync(localEntryPath).isDirectory()) {
-          fs.rmdirSync(localEntryPath, { recursive: true });
-          console.log(`Removed outdated directory: ${localEntryPath}`);
-        }
-      }
-    } else if (typeof entryValue === 'object' && fs.existsSync(localEntryPath)) {
-      // Recurse into directories to remove outdated files within them
-      removeOutdatedFiles(entryValue, serverMetadata[entryName] || {}, localEntryPath);
-    }
-  }
-}
-
-// Main synchronization function that uses the updated metadata format
-async function synchronizeFiles(metadata, modpackName, instancePath) {
-  const baseUrl = `https://cdn.ripple-co.io/rcg2/instances/${encodeURIComponent(modpackName)}/`;
-  const localMetadataPath = path.join(instancePath, 'local_metadata.json');
-
-  // Load local metadata if it exists
-  let localMetadata = {};
-  if (fs.existsSync(localMetadataPath)) {
-    localMetadata = JSON.parse(fs.readFileSync(localMetadataPath, 'utf-8'));
-  }
-
-  // Process files according to server metadata and update them as needed
-  await processMetadataRecursively(metadata, instancePath, baseUrl);
-
-  // Remove outdated files that are in the local metadata but not in the server metadata
-  removeOutdatedFiles(localMetadata, metadata, instancePath);
-
-  // Save the server metadata as the new local metadata for future checks
-  fs.writeFileSync(localMetadataPath, JSON.stringify(metadata, null, 2));
-  console.log(`Synchronization complete for modpack: ${modpackName}`);
-}
-
-// Function to fetch metadata JSON from the server
 async function fetchMetadata(modpackName) {
-  const url = `https://cdn.ripple-co.io/rcg2/instances/${encodeURIComponent(modpackName)}/metadata.json`;
-  console.log(`Fetching metadata from: ${url}`);
+  const url = `${API_BASE}/metadata/${encodeURIComponent(modpackName)}`;
+  console.log(`Fetching metadata for ${modpackName}`);
 
   const response = await fetchWithDynamicImport(url);
   if (!response.ok) {
@@ -128,6 +238,7 @@ async function fetchMetadata(modpackName) {
 
 module.exports = {
   fetchMetadata,
-  downloadFile,
-  synchronizeFiles,
+  syncModpackFiles,
+  getLocalModsList,
+  eventEmitter  // Export the event emitter
 };

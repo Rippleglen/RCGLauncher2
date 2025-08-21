@@ -63,7 +63,7 @@ async function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile('views/splash.ejs');
  
-  const isDev = false
+  const isDev = true
   console.log (isDev);
  
   async function navigateToMainPage() {

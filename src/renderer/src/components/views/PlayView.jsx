@@ -21,7 +21,8 @@ export default function PlayView({ modpack }) {
 
     window.electron.game.onStatus((data) => {
       setStatusText(data.text)
-      setStage(data.stage ?? 'running')
+      // 'error' stage resets to idle so the play button is clickable again
+      setStage(data.stage === 'error' ? 'idle' : (data.stage ?? 'running'))
     })
 
     window.electron.game.onProgress((data) => {

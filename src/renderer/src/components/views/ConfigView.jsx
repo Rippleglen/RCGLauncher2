@@ -28,7 +28,7 @@ export default function ConfigView({ modpack }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6"><div className="max-w-2xl">
+    <div className="h-full overflow-y-auto p-6"><div className="max-w-2xl mx-auto">
       <h1 className="text-lg font-semibold mb-3 pb-2 border-b border-surface-600">
         Configuration — {modpack.name}
       </h1>
@@ -72,7 +72,8 @@ export default function ConfigView({ modpack }) {
                        resize-none focus:outline-none focus:border-accent"
             placeholder="-XX:+UnlockExperimentalVMOptions&#10;-XX:+UseG1GC"
           />
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center justify-end gap-3 mt-2">
+            {saved && <span className="text-xs text-accent">Saved</span>}
             <button
               onClick={handleSave}
               className="px-4 py-1.5 bg-surface-600 hover:bg-surface-500 text-white text-xs uppercase
@@ -80,7 +81,6 @@ export default function ConfigView({ modpack }) {
             >
               Save
             </button>
-            {saved && <span className="text-xs text-accent">Saved</span>}
           </div>
           <p className="text-xs text-gray-600 mt-1">
             To enable -XX:+UseLargePages, launch RCGLauncher as Administrator.

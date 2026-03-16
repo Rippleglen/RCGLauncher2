@@ -33,17 +33,27 @@ export default function PatchNotesView({ modpack }) {
   }, [modpack.name])
 
   if (loading) {
-    return <div className="p-6 text-sm text-gray-400">Loading patch notes...</div>
+    return (
+      <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+        <i className="fa-solid fa-spinner fa-spin mr-2" /> Loading patch notes…
+      </div>
+    )
   }
 
   if (!posts.length) {
-    return <div className="p-6 text-sm text-gray-400">No patch notes found for {modpack.name}.</div>
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-500">
+        <i className="fa-solid fa-newspaper text-5xl opacity-20" />
+        <p className="text-sm">No patch notes found for {modpack.name}.</p>
+      </div>
+    )
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="h-full overflow-y-auto">
+      <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-600">Patch Notes</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {posts.map((post, i) => (
           <a
             key={i}
@@ -57,6 +67,7 @@ export default function PatchNotesView({ modpack }) {
             <p className="text-xs text-gray-500">{new Date(post.date).toLocaleDateString()}</p>
           </a>
         ))}
+      </div>
       </div>
     </div>
   )

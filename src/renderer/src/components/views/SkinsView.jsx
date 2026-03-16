@@ -54,21 +54,19 @@ function UploadModal({ onUpload, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-surface-800 border border-surface-600 rounded-xl shadow-2xl w-80 p-6 space-y-4">
-        <h2 className="text-base font-semibold">Upload skin</h2>
+        <h2 className="text-base font-semibold text-center">Upload skin</h2>
 
         {/* File picker */}
-        <div>
-          <button
-            onClick={pickFile}
-            className="w-full py-2 border-2 border-dashed border-surface-500 hover:border-accent
-                       rounded-lg text-sm text-gray-400 hover:text-accent transition-colors"
-          >
-            {filePath
-              ? <span className="text-white">{filePath.split(/[\\/]/).pop()}</span>
-              : <><i className="fa-solid fa-image mr-2" />Choose PNG…</>
-            }
-          </button>
-        </div>
+        <button
+          onClick={pickFile}
+          className="w-full py-2 border-2 border-dashed border-surface-500 hover:border-accent
+                     rounded-lg text-sm text-gray-400 hover:text-accent transition-colors"
+        >
+          {filePath
+            ? <span className="text-white">{filePath.split(/[\\/]/).pop()}</span>
+            : <><i className="fa-solid fa-image mr-2" />Choose PNG…</>
+          }
+        </button>
 
         {/* Label */}
         <div>
@@ -101,7 +99,7 @@ function UploadModal({ onUpload, onClose }) {
           </div>
         </div>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-red-400 text-center">{error}</p>}
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">
@@ -240,37 +238,28 @@ export default function SkinsView({ user }) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 max-w-3xl">
+      <div className="p-6 max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h1 className="text-lg font-semibold">Skins</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Your skin library — click Apply to set a skin on your Minecraft profile
-            </p>
-          </div>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover
-                       text-white text-sm font-semibold rounded-lg transition-colors"
-          >
-            <i className="fa-solid fa-plus" />
-            Upload skin
-          </button>
+        <div className="mb-6">
+          <h1 className="text-lg font-semibold">Skins</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Your skin library — click Apply to set a skin on your Minecraft profile
+          </p>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-500">
+          <div className="flex items-center justify-center py-24 text-gray-500">
             <i className="fa-solid fa-spinner fa-spin mr-2" /> Loading…
           </div>
         ) : skins.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-500">
-            <i className="fa-solid fa-shirt text-4xl opacity-30" />
+          <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-500">
+            <i className="fa-solid fa-shirt text-5xl opacity-20" />
             <p className="text-sm">No skins yet — upload your first one</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid gap-3"
+               style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
             {skins.map(skin => (
               <SkinCard
                 key={skin.id}
@@ -292,9 +281,20 @@ export default function SkinsView({ user }) {
         />
       )}
 
+      {/* Floating upload button — bottom right */}
+      <button
+        onClick={() => setShowUpload(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5
+                   bg-accent hover:bg-accent-hover text-white text-sm font-semibold
+                   rounded-lg shadow-lg transition-colors"
+      >
+        <i className="fa-solid fa-plus" />
+        Upload skin
+      </button>
+
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-4 right-4 px-4 py-2.5 rounded-lg text-sm shadow-xl
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-lg text-sm shadow-xl z-50
           ${toast.type === 'error' ? 'bg-red-500/20 border border-red-500/40 text-red-300'
                                    : 'bg-accent/20 border border-accent/40 text-accent'}`}>
           {toast.text}

@@ -34,7 +34,8 @@ contextBridge.exposeInMainWorld("electron", {
     getSystemRam: () => ipcRenderer.invoke("config:getSystemRam"),
     getVersion: () => ipcRenderer.invoke("config:getVersion"),
     getJvmArgs: (modpackName) => ipcRenderer.invoke("config:getJvmArgs", modpackName),
-    setJvmArgs: (modpackName, args) => ipcRenderer.invoke("config:setJvmArgs", modpackName, args)
+    setJvmArgs: (modpackName, args) => ipcRenderer.invoke("config:setJvmArgs", modpackName, args),
+    getDefaultJvmFlags: (mcVersion) => ipcRenderer.invoke("config:getDefaultJvmFlags", mcVersion)
   },
   // Admin / authoring tool
   admin: {
@@ -47,6 +48,15 @@ contextBridge.exposeInMainWorld("electron", {
     updateTiers: (key, modpackName, tiers) => ipcRenderer.invoke("admin:updateTiers", key, modpackName, tiers),
     deleteModpack: (key, modpackName) => ipcRenderer.invoke("admin:deleteModpack", key, modpackName),
     regenerateManifest: (key, modpackName) => ipcRenderer.invoke("admin:regenerateManifest", key, modpackName)
+  },
+  // Skin management
+  skins: {
+    list: (uuid) => ipcRenderer.invoke("skins:list", uuid),
+    getBodyRender: (uuid) => ipcRenderer.invoke("skins:getBodyRender", uuid),
+    pickFile: () => ipcRenderer.invoke("skins:pickFile"),
+    upload: (uuid, skinType, label, path) => ipcRenderer.invoke("skins:upload", { uuid, skinType, label, filePath: path }),
+    delete: (uuid, skinId) => ipcRenderer.invoke("skins:delete", { uuid, skinId }),
+    apply: (skinUrl, skinType) => ipcRenderer.invoke("skins:apply", { skinUrl, skinType })
   },
   // Updater — pull based: call check(), await it, listen for status updates
   updater: {

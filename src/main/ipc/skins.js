@@ -49,6 +49,22 @@ export function registerSkinHandlers(appDataPath) {
     return res.json()
   })
 
+  // Fetch the Crafatar body render via main process and return as a data URL.
+  // This sidesteps any renderer-side network sandbox that blocks remote images.
+  ipcMain.handle('skins:getBodyRender', async (_, uuid) => {
+    try {
+      const res = await fetch(
+        `https://crafatar.com/renders/body/${uuid}?overlay&scale=6`,
+        { headers: { 'User-Agent': 'RCGLauncher/2' } }
+      )
+      if (!res.ok) return null
+      const buf = Buffer.from(await res.arrayBuffer())
+      return `data:image/png;base64,${buf.toString('base64')}`
+    } catch {
+      return null
+    }
+  })
+
   // Apply a skin — downloads from our server, uploads to Mojang's skin API
   ipcMain.handle('skins:apply', async (_, { skinUrl, skinType }) => {
     const authData = await getValidAuthData(appDataPath)

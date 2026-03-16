@@ -21,41 +21,44 @@ function SkinFace({ url, size = 56 }) {
 }
 
 // ── Character preview panel ───────────────────────────────────────────────────
-// Uses Crafatar's body render — always reflects the currently active Mojang skin.
+// Fetches the Crafatar body render through the main process (avoids renderer
+// network sandbox) and displays as a data URL.
 
 function CharacterPanel({ uuid, activeSkin, name }) {
-  const [imgError, setImgError] = useState(false)
+  const [renderSrc, setRenderSrc] = useState(null)  // data URL or null
+  const [loading, setLoading]     = useState(true)
 
-  // Reset error state if uuid changes
-  useEffect(() => setImgError(false), [uuid])
-
-  const renderUrl = `https://crafatar.com/renders/body/${uuid}?overlay&scale=6`
+  useEffect(() => {
+    if (!uuid) return
+    setLoading(true)
+    setRenderSrc(null)
+    window.electron.skins.getBodyRender(uuid)
+      .then(src => setRenderSrc(src))
+      .finally(() => setLoading(false))
+  }, [uuid])
 
   return (
     <div className="flex flex-col items-center gap-4 w-44 shrink-0">
       <div className="w-full bg-surface-800 border border-surface-600 rounded-xl
-                      flex flex-col items-center pt-6 pb-4 gap-3 relative overflow-hidden">
-        {/* subtle grid background */}
-        <div className="absolute inset-0 opacity-[0.03]"
-             style={{ backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 24px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 24px)' }} />
-
+                      flex flex-col items-center pt-6 pb-4 gap-3">
         {/* Character render */}
-        <div className="relative z-10 flex items-end justify-center" style={{ height: 160 }}>
-          {imgError ? (
-            <i className="fa-solid fa-person text-5xl text-gray-600 mb-2" />
-          ) : (
+        <div className="flex items-end justify-center" style={{ height: 160 }}>
+          {loading ? (
+            <i className="fa-solid fa-spinner fa-spin text-2xl text-gray-600" />
+          ) : renderSrc ? (
             <img
-              src={renderUrl}
+              src={renderSrc}
               alt="Current skin"
               style={{ imageRendering: 'pixelated', maxHeight: 160 }}
-              onError={() => setImgError(true)}
               draggable={false}
             />
+          ) : (
+            <i className="fa-solid fa-person text-5xl text-gray-600 mb-2" />
           )}
         </div>
 
         {/* Name + active skin label */}
-        <div className="relative z-10 text-center px-3 min-w-0 w-full">
+        <div className="text-center px-3 min-w-0 w-full">
           <p className="text-sm font-semibold text-white truncate">{name || 'Player'}</p>
           {activeSkin && (
             <p className="text-[10px] text-accent truncate mt-0.5">{activeSkin.label || 'Custom skin'}</p>

@@ -8,20 +8,23 @@ import SkinsView from '../components/views/SkinsView'
 import ConfigView from '../components/views/ConfigView'
 import PatchNotesView from '../components/views/PatchNotesView'
 import SettingsView from '../components/views/SettingsView'
+import AuthoringView from '../components/views/AuthoringView'
 
 const MODPACK_TABS = ['play', 'skins', 'config', 'patchnotes']
 
-export default function Landing({ user, onLogout }) {
+export default function Landing({ user, onLogout, adminKey, onAdminUnlock }) {
   const [modpacks, setModpacks] = useState([])
-  const [selected, setSelected] = useState(null)   // active modpack object or null (home)
+  const [selected, setSelected] = useState(null)
   const [tab, setTab] = useState('play')
-  const [view, setView] = useState('home')          // 'home' | 'modpack' | 'settings'
+  const [view, setView] = useState('home') // 'home' | 'modpack' | 'settings' | 'authoring'
 
-  useEffect(() => {
+  const refreshModpacks = () => {
     window.electron.game.fetchModpacks()
       .then(setModpacks)
       .catch(console.error)
-  }, [])
+  }
+
+  useEffect(() => { refreshModpacks() }, [])
 
   const selectModpack = (modpack) => {
     setSelected(modpack)
@@ -29,19 +32,10 @@ export default function Landing({ user, onLogout }) {
     setView('modpack')
   }
 
-  const goHome = () => {
-    setSelected(null)
-    setView('home')
-  }
-
-  const goSettings = () => {
-    setSelected(null)
-    setView('settings')
-  }
-
   const renderContent = () => {
     if (view === 'home') return <HomeView />
-    if (view === 'settings') return <SettingsView user={user} />
+    if (view === 'settings') return <SettingsView user={user} adminKey={adminKey} onAdminUnlock={onAdminUnlock} />
+    if (view === 'authoring') return <AuthoringView adminKey={adminKey} onModpacksChanged={refreshModpacks} />
     if (view === 'modpack' && selected) {
       switch (tab) {
         case 'play':       return <PlayView modpack={selected} />
@@ -61,11 +55,14 @@ export default function Landing({ user, onLogout }) {
         <Sidebar
           modpacks={modpacks}
           selected={selected}
+          activeView={view}
           onSelectModpack={selectModpack}
-          onHome={goHome}
-          onSettings={goSettings}
+          onHome={() => { setSelected(null); setView('home') }}
+          onSettings={() => { setSelected(null); setView('settings') }}
+          onAuthoring={() => { setSelected(null); setView('authoring') }}
           onLogout={onLogout}
           user={user}
+          isAdmin={!!adminKey}
         />
         <div className="flex flex-col flex-1 overflow-hidden">
           {view === 'modpack' && selected && (

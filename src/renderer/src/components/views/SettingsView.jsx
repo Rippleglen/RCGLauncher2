@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 
-export default function SettingsView({ user }) {
+export default function SettingsView({ user, adminKey, onAdminUnlock }) {
+  const [keyInput, setKeyInput] = useState('')
+  const [keyError, setKeyError] = useState('')
+  const [keyLoading, setKeyLoading] = useState(false)
   const [memoryMode, setMemoryMode] = useState('auto')
   const [memoryGB, setMemoryGB] = useState(8)
   const [systemRam, setSystemRam] = useState(null)
@@ -24,6 +27,24 @@ export default function SettingsView({ user }) {
   const handleMemoryModeChange = async (mode) => {
     setMemoryMode(mode)
     await window.electron.config.set({ memoryMode: mode })
+  }
+
+  const handleUnlock = async () => {
+    setKeyLoading(true)
+    setKeyError('')
+    try {
+      const valid = await window.electron.admin.validateKey(keyInput)
+      if (valid) {
+        onAdminUnlock(keyInput)
+        setKeyInput('')
+      } else {
+        setKeyError('Invalid key')
+      }
+    } catch {
+      setKeyError('Could not reach server')
+    } finally {
+      setKeyLoading(false)
+    }
   }
 
   const handleMemorySlider = async (val) => {
@@ -103,6 +124,45 @@ export default function SettingsView({ user }) {
         </p>
         {user && (
           <p className="text-xs text-gray-500">Logged in as {user.name}</p>
+        )}
+      </div>
+
+      <div className="bg-surface-800 rounded p-4 border border-surface-600">
+        <h3 className="text-sm font-semibold mb-1">Developer Mode</h3>
+        {adminKey ? (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-accent">Authoring mode unlocked</p>
+            <button
+              onClick={() => onAdminUnlock(null)}
+              className="text-xs text-gray-500 hover:text-white transition-colors"
+            >
+              Lock
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-400">Enter your admin key to unlock the modpack authoring tool.</p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => { setKeyInput(e.target.value); setKeyError('') }}
+                onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                placeholder="Admin key"
+                className="flex-1 bg-surface-700 border border-surface-600 px-3 py-1.5 text-sm
+                           text-white rounded focus:outline-none focus:border-accent"
+              />
+              <button
+                onClick={handleUnlock}
+                disabled={keyLoading || !keyInput}
+                className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs
+                           rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {keyLoading ? '...' : 'Unlock'}
+              </button>
+            </div>
+            {keyError && <p className="text-xs text-red-400">{keyError}</p>}
+          </div>
         )}
       </div>
 

@@ -7,6 +7,7 @@ import Landing from './pages/Landing'
 export default function App() {
   const [page, setPage] = useState('splash') // 'splash' | 'welcome' | 'landing'
   const [user, setUser] = useState(null)
+  const [adminKey, setAdminKey] = useState(null)
 
   useEffect(() => {
     const init = async () => {
@@ -37,5 +38,5 @@ export default function App() {
 
   if (page === 'splash') return <Splash />
   if (page === 'welcome') return <Welcome onLoginSuccess={handleLoginSuccess} />
-  return <Landing user={user} onLogout={handleLogout} />
+  return <Landing user={user} onLogout={handleLogout} adminKey={adminKey} onAdminUnlock={setAdminKey} />
 }

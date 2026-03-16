@@ -7,6 +7,7 @@ const { autoUpdater } = updaterPkg
 import { registerAuthHandlers } from './ipc/auth'
 import { registerGameHandlers } from './ipc/game'
 import { registerConfigHandlers } from './ipc/config'
+import { registerAdminHandlers } from './ipc/admin'
 
 export const appDataPath = join(app.getPath('appData'), '.RCGLauncher2')
 
@@ -158,6 +159,7 @@ app.whenReady().then(() => {
   registerAuthHandlers(mainWindow, appDataPath)
   registerGameHandlers(mainWindow, appDataPath)
   registerConfigHandlers(appDataPath)
+  registerAdminHandlers()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -66,6 +66,9 @@ func NewRouter(cfg Config) http.Handler {
 	// Admin endpoints — require ADMIN_KEY header
 	mux.Group(func(mux chi.Router) {
 		mux.Use(r.requireAdmin)
+		mux.Get("/admin/ping", func(w http.ResponseWriter, req *http.Request) {
+			jsonOK(w, map[string]string{"status": "ok"})
+		})
 		mux.Post("/admin/modpacks", r.adminCreateModpack)
 		mux.Put("/admin/modpacks/{name}", r.adminUpdateModpack)
 		mux.Post("/admin/modpacks/{name}/push", r.adminPushFiles)

@@ -1,4 +1,4 @@
-export default function Sidebar({ modpacks, selected, onSelectModpack, onHome, onSettings, onLogout, user }) {
+export default function Sidebar({ modpacks, selected, activeView, onSelectModpack, onHome, onSettings, onAuthoring, onLogout, user, isAdmin }) {
   return (
     <nav className="flex flex-col justify-between w-48 bg-surface-900 border-r-2 border-black shrink-0 overflow-y-auto">
       <div>
@@ -37,7 +37,13 @@ export default function Sidebar({ modpacks, selected, onSelectModpack, onHome, o
 
       {/* Bottom actions */}
       <div className="space-y-px">
-        <button className="nav-btn" onClick={onSettings}>
+        {isAdmin && (
+          <button className={`nav-btn ${activeView === 'authoring' ? 'active' : ''}`} onClick={onAuthoring}>
+            <i className="fa-solid fa-screwdriver-wrench w-4 text-center" />
+            Authoring
+          </button>
+        )}
+        <button className={`nav-btn ${activeView === 'settings' ? 'active' : ''}`} onClick={onSettings}>
           <i className="fa-solid fa-cog w-4 text-center" />
           Settings
         </button>

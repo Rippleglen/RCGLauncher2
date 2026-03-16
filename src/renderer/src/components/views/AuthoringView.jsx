@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
+const LOADERS = ['vanilla', 'fabric', 'quilt', 'neoforge', 'forge']
 
 const EMPTY_META = {
   name: '',
   displayName: '',
   mcVersion: '',
+  loaderType: 'vanilla',
   loaderVersion: '',
   description: '',
   heroImage: '',
@@ -11,14 +14,150 @@ const EMPTY_META = {
   patchCategory: '',
 }
 
+// ── Version fetching helpers ──────────────────────────────────────────────────
+
+async function fetchMcVersions(loaderType) {
+  if (loaderType === 'fabric') {
+    const res = await fetch('https://meta.fabricmc.net/v2/versions/game')
+    const data = await res.json()
+    return data.filter((v) => v.stable).map((v) => v.version)
+  }
+  if (loaderType === 'quilt') {
+    const res = await fetch('https://meta.quiltmc.org/v3/versions/game')
+    const data = await res.json()
+    return data.filter((v) => v.stable).map((v) => v.version)
+  }
+  if (loaderType === 'neoforge') {
+    const res = await fetch(
+      'https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge'
+    )
+    const data = await res.json()
+    const mcSet = new Set()
+    data.versions
+      .filter((v) => !v.includes('beta') && !v.includes('alpha'))
+      .forEach((v) => {
+        const mc = neoforgeToMc(v)
+        if (mc) mcSet.add(mc)
+      })
+    // reverse so newest MC versions appear first
+    return [...mcSet].reverse()
+  }
+  if (loaderType === 'forge') {
+    const res = await fetch(
+      'https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json'
+    )
+    const data = await res.json()
+    return Object.keys(data).sort((a, b) => compareMcVersions(b, a))
+  }
+  // vanilla — Mojang manifest, releases only
+  const res = await fetch('https://launchermeta.mojang.com/mc/game/version_manifest_v2.json')
+  const data = await res.json()
+  return data.versions.filter((v) => v.type === 'release').map((v) => v.id)
+}
+
+async function fetchLoaderVersions(loaderType, mcVersion) {
+  if (!mcVersion || loaderType === 'vanilla') return []
+
+  if (loaderType === 'fabric') {
+    const res = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${mcVersion}`)
+    const data = await res.json()
+    return data.map((v) => v.loader.version)
+  }
+  if (loaderType === 'quilt') {
+    const res = await fetch(`https://meta.quiltmc.org/v3/versions/loader/${mcVersion}`)
+    const data = await res.json()
+    return data.map((v) => v.loader.version)
+  }
+  if (loaderType === 'neoforge') {
+    const res = await fetch(
+      'https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge'
+    )
+    const data = await res.json()
+    return data.versions
+      .filter((v) => !v.includes('beta') && !v.includes('alpha'))
+      .filter((v) => neoforgeToMc(v) === mcVersion)
+      .reverse()
+  }
+  if (loaderType === 'forge') {
+    const res = await fetch(
+      'https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json'
+    )
+    const data = await res.json()
+    return (data[mcVersion] ?? []).reverse()
+  }
+  return []
+}
+
+// NeoForge version → Minecraft version
+// 47.x.x → 1.20.1  (special case, same numbers as old Forge)
+// X.Y.z  → 1.X.Y
+function neoforgeToMc(v) {
+  if (v.startsWith('47.')) return '1.20.1'
+  const parts = v.split('.')
+  if (parts.length >= 2) return `1.${parts[0]}.${parts[1]}`
+  return null
+}
+
+function compareMcVersions(a, b) {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
+// Infer loader type from a saved loaderVersion string
+function inferLoaderType(loaderVersion) {
+  if (!loaderVersion) return 'vanilla'
+  if (loaderVersion.startsWith('fabric-loader-')) return 'fabric'
+  if (loaderVersion.startsWith('quilt-loader-')) return 'quilt'
+  if (loaderVersion.startsWith('neoforge-')) return 'neoforge'
+  if (loaderVersion.startsWith('forge-')) return 'forge'
+  return 'vanilla'
+}
+
+// Format a raw loader version number into the stored string
+function formatLoaderVersion(loaderType, rawVersion) {
+  if (!rawVersion || loaderType === 'vanilla') return ''
+  if (loaderType === 'fabric') return `fabric-loader-${rawVersion}`
+  if (loaderType === 'quilt') return `quilt-loader-${rawVersion}`
+  if (loaderType === 'neoforge') return `neoforge-${rawVersion}`
+  if (loaderType === 'forge') return `forge-${rawVersion}`
+  return rawVersion
+}
+
+// Strip the prefix to get the raw version for displaying in the dropdown
+function rawLoaderVersion(loaderType, loaderVersion) {
+  if (!loaderVersion) return ''
+  const prefixes = {
+    fabric: 'fabric-loader-',
+    quilt: 'quilt-loader-',
+    neoforge: 'neoforge-',
+    forge: 'forge-',
+  }
+  const prefix = prefixes[loaderType]
+  return prefix && loaderVersion.startsWith(prefix)
+    ? loaderVersion.slice(prefix.length)
+    : loaderVersion
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function AuthoringView({ adminKey, onModpacksChanged }) {
   const [modpacks, setModpacks] = useState([])
-  const [selected, setSelected] = useState(null)   // modpack name being edited, or '__new__'
+  const [selected, setSelected] = useState(null)
   const [meta, setMeta] = useState(EMPTY_META)
   const [isNew, setIsNew] = useState(false)
   const [filePath, setFilePath] = useState(null)
-  const [status, setStatus] = useState(null)        // { type: 'ok'|'error', text }
+  const [status, setStatus] = useState(null)
   const [busy, setBusy] = useState(false)
+
+  // Version dropdown state
+  const [mcVersions, setMcVersions] = useState([])
+  const [loaderVersions, setLoaderVersions] = useState([])
+  const [versionsLoading, setVersionsLoading] = useState(false)
 
   const refreshList = async () => {
     const packs = await window.electron.game.fetchModpacks()
@@ -27,12 +166,48 @@ export default function AuthoringView({ adminKey, onModpacksChanged }) {
 
   useEffect(() => { refreshList() }, [])
 
+  // Fetch MC versions whenever loader type changes
+  useEffect(() => {
+    if (!selected) return
+    setMcVersions([])
+    setLoaderVersions([])
+    setVersionsLoading(true)
+    fetchMcVersions(meta.loaderType)
+      .then(setMcVersions)
+      .catch(() => setMcVersions([]))
+      .finally(() => setVersionsLoading(false))
+  }, [meta.loaderType, selected])
+
+  // Fetch loader versions whenever MC version changes
+  const loadLoaderVersions = useCallback(async (loaderType, mcVersion) => {
+    if (!mcVersion || loaderType === 'vanilla') {
+      setLoaderVersions([])
+      return
+    }
+    setVersionsLoading(true)
+    try {
+      const versions = await fetchLoaderVersions(loaderType, mcVersion)
+      setLoaderVersions(versions)
+    } catch {
+      setLoaderVersions([])
+    } finally {
+      setVersionsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selected) return
+    loadLoaderVersions(meta.loaderType, meta.mcVersion)
+  }, [meta.mcVersion, meta.loaderType, selected, loadLoaderVersions])
+
   const selectExisting = (pack) => {
+    const loaderType = pack.loaderType || inferLoaderType(pack.loaderVersion)
     setSelected(pack.name)
     setMeta({
       name:          pack.name          ?? '',
       displayName:   pack.displayName   ?? '',
       mcVersion:     pack.mcVersion     ?? '',
+      loaderType,
       loaderVersion: pack.loaderVersion ?? '',
       description:   pack.description   ?? '',
       heroImage:     pack.heroImage     ?? '',
@@ -54,6 +229,19 @@ export default function AuthoringView({ adminKey, onModpacksChanged }) {
 
   const setField = (key, val) => setMeta((m) => ({ ...m, [key]: val }))
 
+  const handleLoaderTypeChange = (loaderType) => {
+    setMeta((m) => ({ ...m, loaderType, mcVersion: '', loaderVersion: '' }))
+    setLoaderVersions([])
+  }
+
+  const handleMcVersionChange = (mcVersion) => {
+    setMeta((m) => ({ ...m, mcVersion, loaderVersion: '' }))
+  }
+
+  const handleLoaderVersionChange = (rawVersion) => {
+    setField('loaderVersion', formatLoaderVersion(meta.loaderType, rawVersion))
+  }
+
   const handlePickFile = async () => {
     const path = await window.electron.admin.pickFile()
     if (path) setFilePath(path)
@@ -64,11 +252,9 @@ export default function AuthoringView({ adminKey, onModpacksChanged }) {
     setBusy(true)
     setStatus(null)
     try {
-      // 1. Save metadata
       setStatus({ type: 'ok', text: 'Saving metadata...' })
       await window.electron.admin.saveModpack(adminKey, meta, isNew)
 
-      // 2. Push files if one was selected
       if (filePath) {
         setStatus({ type: 'ok', text: 'Uploading files...' })
         const result = await window.electron.admin.pushFiles(adminKey, meta.name, filePath)
@@ -116,6 +302,8 @@ export default function AuthoringView({ adminKey, onModpacksChanged }) {
       setBusy(false)
     }
   }
+
+  const currentRawLoader = rawLoaderVersion(meta.loaderType, meta.loaderVersion)
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -180,14 +368,91 @@ export default function AuthoringView({ adminKey, onModpacksChanged }) {
                   <input value={meta.displayName} onChange={(e) => setField('displayName', e.target.value)}
                     placeholder="Gravitas V2" />
                 </Field>
-                <Field label="Minecraft Version">
-                  <input value={meta.mcVersion} onChange={(e) => setField('mcVersion', e.target.value)}
-                    placeholder="1.20.1" />
-                </Field>
-                <Field label="Loader Version">
-                  <input value={meta.loaderVersion} onChange={(e) => setField('loaderVersion', e.target.value)}
-                    placeholder="neoforge-47.2.0" />
-                </Field>
+              </div>
+
+              {/* Loader + version row */}
+              <div className="space-y-2">
+                <h3 className="text-xs text-gray-400 uppercase tracking-widest">Modloader</h3>
+
+                {/* Loader type pills */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {LOADERS.map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => handleLoaderTypeChange(l)}
+                      className={`px-3 py-1 text-xs rounded capitalize transition-colors
+                        ${meta.loaderType === l
+                          ? 'bg-accent text-white'
+                          : 'bg-surface-700 text-gray-400 hover:text-white hover:bg-surface-600'}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* MC version dropdown */}
+                  <Field label="Minecraft Version">
+                    {mcVersions.length > 0 ? (
+                      <select
+                        value={meta.mcVersion}
+                        onChange={(e) => handleMcVersionChange(e.target.value)}
+                      >
+                        <option value="">Select version…</option>
+                        {mcVersions.map((v) => (
+                          <option key={v} value={v}>{v}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        value={meta.mcVersion}
+                        onChange={(e) => setField('mcVersion', e.target.value)}
+                        placeholder={versionsLoading ? 'Loading…' : '1.20.1'}
+                        disabled={versionsLoading}
+                      />
+                    )}
+                  </Field>
+
+                  {/* Loader version dropdown — hidden for vanilla */}
+                  {meta.loaderType !== 'vanilla' && (
+                    <Field label="Loader Version">
+                      {loaderVersions.length > 0 ? (
+                        <select
+                          value={currentRawLoader}
+                          onChange={(e) => handleLoaderVersionChange(e.target.value)}
+                        >
+                          <option value="">Select version…</option>
+                          {loaderVersions.map((v) => (
+                            <option key={v} value={v}>{v}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          value={currentRawLoader}
+                          onChange={(e) => handleLoaderVersionChange(e.target.value)}
+                          placeholder={
+                            versionsLoading
+                              ? 'Loading…'
+                              : meta.mcVersion
+                              ? 'No versions found'
+                              : 'Pick MC version first'
+                          }
+                          disabled={versionsLoading || !meta.mcVersion}
+                        />
+                      )}
+                    </Field>
+                  )}
+                </div>
+
+                {/* Show the formatted loaderVersion string for reference */}
+                {meta.loaderVersion && (
+                  <p className="text-xs text-gray-500">
+                    Stored as: <span className="text-gray-400 font-mono">{meta.loaderVersion}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Patch Notes Category">
                   <input value={meta.patchCategory} onChange={(e) => setField('patchCategory', e.target.value)}
                     placeholder="gravitas" />
@@ -267,19 +532,26 @@ export default function AuthoringView({ adminKey, onModpacksChanged }) {
   )
 }
 
-// Reusable field wrapper
+// Reusable field wrapper — also handles select styling
 function Field({ label, children, disabled }) {
   return (
     <div>
       <label className="block text-xs text-gray-400 uppercase tracking-widest mb-1">{label}</label>
-      <div className={`[&_input]:w-full [&_textarea]:w-full [&_input]:bg-surface-700 [&_textarea]:bg-surface-700
-        [&_input]:border [&_textarea]:border [&_input]:border-surface-600 [&_textarea]:border-surface-600
+      <div className={`
+        [&_input]:w-full [&_textarea]:w-full [&_select]:w-full
+        [&_input]:bg-surface-700 [&_textarea]:bg-surface-700 [&_select]:bg-surface-700
+        [&_input]:border [&_textarea]:border [&_select]:border
+        [&_input]:border-surface-600 [&_textarea]:border-surface-600 [&_select]:border-surface-600
         [&_input]:px-3 [&_input]:py-1.5 [&_textarea]:px-3 [&_textarea]:py-1.5
-        [&_input]:text-sm [&_textarea]:text-sm [&_input]:text-white [&_textarea]:text-white
-        [&_input]:rounded [&_textarea]:rounded [&_textarea]:resize-none
-        [&_input]:focus:outline-none [&_textarea]:focus:outline-none
-        [&_input]:focus:border-accent [&_textarea]:focus:border-accent
-        [&_input:disabled]:text-gray-500 [&_input:disabled]:cursor-not-allowed`}>
+        [&_select]:px-3 [&_select]:py-1.5
+        [&_input]:text-sm [&_textarea]:text-sm [&_select]:text-sm
+        [&_input]:text-white [&_textarea]:text-white [&_select]:text-white
+        [&_input]:rounded [&_textarea]:rounded [&_select]:rounded [&_textarea]:resize-none
+        [&_input]:focus:outline-none [&_textarea]:focus:outline-none [&_select]:focus:outline-none
+        [&_input]:focus:border-accent [&_textarea]:focus:border-accent [&_select]:focus:border-accent
+        [&_input:disabled]:text-gray-500 [&_input:disabled]:cursor-not-allowed
+        [&_select]:cursor-pointer [&_select]:appearance-none
+      `}>
         {children}
       </div>
     </div>

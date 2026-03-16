@@ -106,6 +106,7 @@ type ModpackMeta struct {
 	Name          string `json:"name"`
 	DisplayName   string `json:"displayName"`
 	MCVersion     string `json:"mcVersion"`
+	LoaderType    string `json:"loaderType,omitempty"`
 	LoaderVersion string `json:"loaderVersion,omitempty"`
 	Description   string `json:"description"`
 	HeroImage     string `json:"heroImage,omitempty"`

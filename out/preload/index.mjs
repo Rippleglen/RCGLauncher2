@@ -36,6 +36,15 @@ contextBridge.exposeInMainWorld("electron", {
     getJvmArgs: (modpackName) => ipcRenderer.invoke("config:getJvmArgs", modpackName),
     setJvmArgs: (modpackName, args) => ipcRenderer.invoke("config:setJvmArgs", modpackName, args)
   },
+  // Admin / authoring tool
+  admin: {
+    validateKey: (key) => ipcRenderer.invoke("admin:validateKey", key),
+    saveModpack: (key, meta, isNew) => ipcRenderer.invoke("admin:saveModpack", key, meta, isNew),
+    pickFile: () => ipcRenderer.invoke("admin:pickFile"),
+    pushFiles: (key, modpackName, filePath) => ipcRenderer.invoke("admin:pushFiles", key, modpackName, filePath),
+    deleteModpack: (key, modpackName) => ipcRenderer.invoke("admin:deleteModpack", key, modpackName),
+    regenerateManifest: (key, modpackName) => ipcRenderer.invoke("admin:regenerateManifest", key, modpackName)
+  },
   // Updater — pull based: call check(), await it, listen for status updates
   updater: {
     check: () => ipcRenderer.invoke("updater:check"),

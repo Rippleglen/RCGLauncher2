@@ -7071,7 +7071,7 @@ function Welcome({ onLoginSuccess }) {
     ] })
   ] });
 }
-function Sidebar({ modpacks, selected, onSelectModpack, onHome, onSettings, onLogout, user }) {
+function Sidebar({ modpacks, selected, activeView, onSelectModpack, onHome, onSettings, onAuthoring, onLogout, user, isAdmin }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex flex-col justify-between w-48 bg-surface-900 border-r-2 border-black shrink-0 overflow-y-auto", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center py-3 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "../../assets/RippleCoLogo.webp", alt: "RCG", className: "w-24" }) }),
@@ -7099,7 +7099,11 @@ function Sidebar({ modpacks, selected, onSelectModpack, onHome, onSettings, onLo
       ) }, mp.name)) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-px", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "nav-btn", onClick: onSettings, children: [
+      isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: `nav-btn ${activeView === "authoring" ? "active" : ""}`, onClick: onAuthoring, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-screwdriver-wrench w-4 text-center" }),
+        "Authoring"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: `nav-btn ${activeView === "settings" ? "active" : ""}`, onClick: onSettings, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-cog w-4 text-center" }),
         "Settings"
       ] }),
@@ -7346,7 +7350,10 @@ function PatchNotesView({ modpack }) {
     )) })
   ] });
 }
-function SettingsView({ user }) {
+function SettingsView({ user, adminKey, onAdminUnlock }) {
+  const [keyInput, setKeyInput] = reactExports.useState("");
+  const [keyError, setKeyError] = reactExports.useState("");
+  const [keyLoading, setKeyLoading] = reactExports.useState(false);
   const [memoryMode, setMemoryMode] = reactExports.useState("auto");
   const [memoryGB, setMemoryGB] = reactExports.useState(8);
   const [systemRam, setSystemRam] = reactExports.useState(null);
@@ -7368,6 +7375,23 @@ function SettingsView({ user }) {
   const handleMemoryModeChange = async (mode) => {
     setMemoryMode(mode);
     await window.electron.config.set({ memoryMode: mode });
+  };
+  const handleUnlock = async () => {
+    setKeyLoading(true);
+    setKeyError("");
+    try {
+      const valid = await window.electron.admin.validateKey(keyInput);
+      if (valid) {
+        onAdminUnlock(keyInput);
+        setKeyInput("");
+      } else {
+        setKeyError("Invalid key");
+      }
+    } catch {
+      setKeyError("Could not reach server");
+    } finally {
+      setKeyLoading(false);
+    }
   };
   const handleMemorySlider = async (val) => {
     const gb2 = Number(val);
@@ -7443,37 +7467,340 @@ function SettingsView({ user }) {
         user.name
       ] })
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-surface-800 rounded p-4 border border-surface-600", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold mb-1", children: "Developer Mode" }),
+      adminKey ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-accent", children: "Authoring mode unlocked" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => onAdminUnlock(null),
+            className: "text-xs text-gray-500 hover:text-white transition-colors",
+            children: "Lock"
+          }
+        )
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Enter your admin key to unlock the modpack authoring tool." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "password",
+              value: keyInput,
+              onChange: (e) => {
+                setKeyInput(e.target.value);
+                setKeyError("");
+              },
+              onKeyDown: (e) => e.key === "Enter" && handleUnlock(),
+              placeholder: "Admin key",
+              className: "flex-1 bg-surface-700 border border-surface-600 px-3 py-1.5 text-sm\r\n                           text-white rounded focus:outline-none focus:border-accent"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleUnlock,
+              disabled: keyLoading || !keyInput,
+              className: "px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs\r\n                           rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+              children: keyLoading ? "..." : "Unlock"
+            }
+          )
+        ] }),
+        keyError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-red-400", children: keyError })
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-600 pl-1", children: [
       "v",
       version
     ] })
   ] });
 }
+const EMPTY_META = {
+  name: "",
+  displayName: "",
+  mcVersion: "",
+  loaderVersion: "",
+  description: "",
+  heroImage: "",
+  icon: "",
+  patchCategory: ""
+};
+function AuthoringView({ adminKey, onModpacksChanged }) {
+  const [modpacks, setModpacks] = reactExports.useState([]);
+  const [selected, setSelected] = reactExports.useState(null);
+  const [meta, setMeta] = reactExports.useState(EMPTY_META);
+  const [isNew, setIsNew] = reactExports.useState(false);
+  const [filePath, setFilePath] = reactExports.useState(null);
+  const [status, setStatus] = reactExports.useState(null);
+  const [busy, setBusy] = reactExports.useState(false);
+  const refreshList = async () => {
+    const packs = await window.electron.game.fetchModpacks();
+    setModpacks(packs);
+  };
+  reactExports.useEffect(() => {
+    refreshList();
+  }, []);
+  const selectExisting = (pack) => {
+    setSelected(pack.name);
+    setMeta({
+      name: pack.name ?? "",
+      displayName: pack.displayName ?? "",
+      mcVersion: pack.mcVersion ?? "",
+      loaderVersion: pack.loaderVersion ?? "",
+      description: pack.description ?? "",
+      heroImage: pack.heroImage ?? "",
+      icon: pack.icon ?? "",
+      patchCategory: pack.patchCategory ?? ""
+    });
+    setIsNew(false);
+    setFilePath(null);
+    setStatus(null);
+  };
+  const selectNew = () => {
+    setSelected("__new__");
+    setMeta(EMPTY_META);
+    setIsNew(true);
+    setFilePath(null);
+    setStatus(null);
+  };
+  const setField = (key, val) => setMeta((m2) => ({ ...m2, [key]: val }));
+  const handlePickFile = async () => {
+    const path = await window.electron.admin.pickFile();
+    if (path) setFilePath(path);
+  };
+  const handlePublish = async () => {
+    if (!meta.name.trim()) return setStatus({ type: "error", text: "Name is required" });
+    setBusy(true);
+    setStatus(null);
+    try {
+      setStatus({ type: "ok", text: "Saving metadata..." });
+      await window.electron.admin.saveModpack(adminKey, meta, isNew);
+      if (filePath) {
+        setStatus({ type: "ok", text: "Uploading files..." });
+        const result = await window.electron.admin.pushFiles(adminKey, meta.name, filePath);
+        setStatus({ type: "ok", text: `Published — ${result.fileCount} files indexed` });
+      } else {
+        setStatus({ type: "ok", text: "Metadata saved" });
+      }
+      setIsNew(false);
+      setFilePath(null);
+      await refreshList();
+      onModpacksChanged();
+    } catch (err) {
+      setStatus({ type: "error", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const handleRegenerate = async () => {
+    setBusy(true);
+    setStatus({ type: "ok", text: "Regenerating manifest..." });
+    try {
+      const result = await window.electron.admin.regenerateManifest(adminKey, meta.name);
+      setStatus({ type: "ok", text: `Manifest rebuilt — ${result.fileCount} files` });
+    } catch (err) {
+      setStatus({ type: "error", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const handleDelete = async () => {
+    if (!confirm(`Delete ${meta.name}? This cannot be undone.`)) return;
+    setBusy(true);
+    try {
+      await window.electron.admin.deleteModpack(adminKey, meta.name);
+      setSelected(null);
+      setMeta(EMPTY_META);
+      await refreshList();
+      onModpacksChanged();
+    } catch (err) {
+      setStatus({ type: "error", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full overflow-hidden", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-52 shrink-0 bg-surface-800 border-r border-surface-600 flex flex-col overflow-y-auto", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 border-b border-surface-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: selectNew,
+          className: `nav-btn w-full rounded text-left ${selected === "__new__" ? "active" : ""}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-plus w-4 text-center" }),
+            "New Modpack"
+          ]
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "flex-1 p-2 space-y-0.5", children: modpacks.map((p2) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: () => selectExisting(p2),
+          className: `nav-btn w-full text-left rounded ${selected === p2.name ? "active" : ""}`,
+          children: [
+            p2.icon ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: p2.icon, alt: "", className: "w-4 h-4 rounded object-cover shrink-0" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "fa-solid fa-cube w-4 text-center" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: p2.displayName || p2.name })
+          ]
+        }
+      ) }, p2.name)) })
+    ] }),
+    selected ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-2xl space-y-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-lg font-semibold", children: isNew ? "New Modpack" : meta.displayName || meta.name }),
+        !isNew && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleDelete,
+            disabled: busy,
+            className: "text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50",
+            children: "Delete modpack"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-surface-800 rounded border border-surface-600 p-4 space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xs text-gray-400 uppercase tracking-widest", children: "Metadata" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Internal Name *", disabled: !isNew, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: meta.name,
+              onChange: (e) => setField("name", e.target.value),
+              disabled: !isNew,
+              placeholder: "GravitasV2"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: meta.displayName,
+              onChange: (e) => setField("displayName", e.target.value),
+              placeholder: "Gravitas V2"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Minecraft Version", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: meta.mcVersion,
+              onChange: (e) => setField("mcVersion", e.target.value),
+              placeholder: "1.20.1"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Loader Version", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: meta.loaderVersion,
+              onChange: (e) => setField("loaderVersion", e.target.value),
+              placeholder: "neoforge-47.2.0"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Patch Notes Category", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: meta.patchCategory,
+              onChange: (e) => setField("patchCategory", e.target.value),
+              placeholder: "gravitas"
+            }
+          ) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "textarea",
+          {
+            value: meta.description,
+            onChange: (e) => setField("description", e.target.value),
+            rows: 3,
+            placeholder: "A description shown on the play screen..."
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Hero Image URL", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            value: meta.heroImage,
+            onChange: (e) => setField("heroImage", e.target.value),
+            placeholder: "https://..."
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Icon URL", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            value: meta.icon,
+            onChange: (e) => setField("icon", e.target.value),
+            placeholder: "https://..."
+          }
+        ) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-surface-800 rounded border border-surface-600 p-4 space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xs text-gray-400 uppercase tracking-widest", children: "Mod Files" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Upload a ZIP containing your mods/, config/, resourcepacks/ etc. The server will extract it and rebuild the sync manifest automatically." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handlePickFile,
+              className: "px-3 py-1.5 bg-surface-600 hover:bg-surface-500 text-white text-xs rounded transition-colors",
+              children: "Choose ZIP..."
+            }
+          ),
+          filePath ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-accent truncate", children: filePath.split(/[\\/]/).pop() }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No file selected — metadata only" })
+        ] }),
+        !isNew && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleRegenerate,
+            disabled: busy,
+            className: "text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50",
+            children: "Regenerate manifest from existing server files"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handlePublish,
+            disabled: busy || !meta.name.trim(),
+            className: "px-5 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold\r\n                           rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+            children: busy ? "Publishing..." : isNew ? "Create & Publish" : "Save & Publish"
+          }
+        ),
+        status && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs ${status.type === "error" ? "text-red-400" : "text-accent"}`, children: status.text })
+      ] })
+    ] }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center text-gray-500 text-sm", children: "Select a modpack or create a new one" })
+  ] });
+}
+function Field({ label, children, disabled }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-400 uppercase tracking-widest mb-1", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `[&_input]:w-full [&_textarea]:w-full [&_input]:bg-surface-700 [&_textarea]:bg-surface-700
+        [&_input]:border [&_textarea]:border [&_input]:border-surface-600 [&_textarea]:border-surface-600
+        [&_input]:px-3 [&_input]:py-1.5 [&_textarea]:px-3 [&_textarea]:py-1.5
+        [&_input]:text-sm [&_textarea]:text-sm [&_input]:text-white [&_textarea]:text-white
+        [&_input]:rounded [&_textarea]:rounded [&_textarea]:resize-none
+        [&_input]:focus:outline-none [&_textarea]:focus:outline-none
+        [&_input]:focus:border-accent [&_textarea]:focus:border-accent
+        [&_input:disabled]:text-gray-500 [&_input:disabled]:cursor-not-allowed`, children })
+  ] });
+}
 const MODPACK_TABS = ["play", "skins", "config", "patchnotes"];
-function Landing({ user, onLogout }) {
+function Landing({ user, onLogout, adminKey, onAdminUnlock }) {
   const [modpacks, setModpacks] = reactExports.useState([]);
   const [selected, setSelected] = reactExports.useState(null);
   const [tab, setTab] = reactExports.useState("play");
   const [view, setView] = reactExports.useState("home");
-  reactExports.useEffect(() => {
+  const refreshModpacks = () => {
     window.electron.game.fetchModpacks().then(setModpacks).catch(console.error);
+  };
+  reactExports.useEffect(() => {
+    refreshModpacks();
   }, []);
   const selectModpack = (modpack) => {
     setSelected(modpack);
     setTab("play");
     setView("modpack");
   };
-  const goHome = () => {
-    setSelected(null);
-    setView("home");
-  };
-  const goSettings = () => {
-    setSelected(null);
-    setView("settings");
-  };
   const renderContent = () => {
     if (view === "home") return /* @__PURE__ */ jsxRuntimeExports.jsx(HomeView, {});
-    if (view === "settings") return /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { user });
+    if (view === "settings") return /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { user, adminKey, onAdminUnlock });
+    if (view === "authoring") return /* @__PURE__ */ jsxRuntimeExports.jsx(AuthoringView, { adminKey, onModpacksChanged: refreshModpacks });
     if (view === "modpack" && selected) {
       switch (tab) {
         case "play":
@@ -7498,11 +7825,23 @@ function Landing({ user, onLogout }) {
         {
           modpacks,
           selected,
+          activeView: view,
           onSelectModpack: selectModpack,
-          onHome: goHome,
-          onSettings: goSettings,
+          onHome: () => {
+            setSelected(null);
+            setView("home");
+          },
+          onSettings: () => {
+            setSelected(null);
+            setView("settings");
+          },
+          onAuthoring: () => {
+            setSelected(null);
+            setView("authoring");
+          },
           onLogout,
-          user
+          user,
+          isAdmin: !!adminKey
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col flex-1 overflow-hidden", children: [
@@ -7523,6 +7862,7 @@ function Landing({ user, onLogout }) {
 function App() {
   const [page, setPage] = reactExports.useState("splash");
   const [user, setUser] = reactExports.useState(null);
+  const [adminKey, setAdminKey] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const init = async () => {
       await window.electron.updater.check();
@@ -7547,7 +7887,7 @@ function App() {
   };
   if (page === "splash") return /* @__PURE__ */ jsxRuntimeExports.jsx(Splash, {});
   if (page === "welcome") return /* @__PURE__ */ jsxRuntimeExports.jsx(Welcome, { onLoginSuccess: handleLoginSuccess });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Landing, { user, onLogout: handleLogout });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Landing, { user, onLogout: handleLogout, adminKey, onAdminUnlock: setAdminKey });
 }
 client.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(React.StrictMode, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(App, {}) })

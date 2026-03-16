@@ -83,9 +83,12 @@ export function registerGameHandlers(mainWindow, appDataPath) {
 
       if (forgeInstaller) opts.forge = forgeInstaller
 
-      // Merge default performance flags with any user-supplied custom args.
-      // User args come last so they can override defaults if needed.
-      opts.customArgs = [...defaultJvmFlags(majorVersion), ...extraJvmArgs]
+      // Use saved JVM args if the user has set any, otherwise fall back to the
+      // recommended defaults. This avoids doubling flags if the user saved the
+      // pre-populated defaults from ConfigView.
+      opts.customArgs = extraJvmArgs.length > 0
+        ? extraJvmArgs
+        : defaultJvmFlags(majorVersion)
 
       await launcher.launch(opts)
       send('game:status', { text: 'Game launched!', stage: 'running' })

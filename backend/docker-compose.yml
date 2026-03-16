@@ -3,11 +3,11 @@ services:
     image: ghcr.io/rippleglen/rcg-backend:latest
     container_name: rcg-backend
     ports:
-      - "8080:8080"
+      - "9000:9000"
     volumes:
       - rcg-data:/app/data
     environment:
-      - PORT=8080
+      - PORT=9000
       - DATA_DIR=/app/data
       - ADMIN_KEY=${ADMIN_KEY:?ADMIN_KEY must be set}
       - BASE_URL=${BASE_URL:-http://localhost:8080}

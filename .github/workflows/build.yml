@@ -1,24 +1,39 @@
-name: Build
+name: Launcher
 
-on: push
+on:
+  push:
+    branches: [main, v3]
+    paths-ignore:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'backend/**'
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'  # Specify the Node.js version you need
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build the Electron app
-        run: npm run build  # Assuming "build" is the script in package.json for building your app
+      - name: Build (electron-vite)
+        run: npm run build
+
+      - name: Package distributable
+        # Only produce a distributable on real pushes, not PRs
+        if: github.event_name == 'push'
+        run: npm run dist
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

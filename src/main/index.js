@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, screen } from 'electron'
 import { join } from 'path'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import updaterPkg from 'electron-updater'
 const { autoUpdater } = updaterPkg
@@ -11,17 +12,52 @@ export const appDataPath = join(app.getPath('appData'), '.RCGLauncher2')
 
 let mainWindow
 
+// --- Window state persistence ---
+
+const windowStatePath = join(app.getPath('userData'), 'window-state.json')
+
+function loadWindowState() {
+  try {
+    if (existsSync(windowStatePath)) {
+      return JSON.parse(readFileSync(windowStatePath, 'utf8'))
+    }
+  } catch {}
+  return null
+}
+
+function isOnScreen(bounds) {
+  return screen.getAllDisplays().some((display) => {
+    const { x, y, width, height } = display.workArea
+    return (
+      bounds.x >= x &&
+      bounds.y >= y &&
+      bounds.x + bounds.width <= x + width &&
+      bounds.y + bounds.height <= y + height
+    )
+  })
+}
+
+function saveWindowState(win) {
+  if (win.isMaximized() || win.isMinimized()) return
+  writeFileSync(windowStatePath, JSON.stringify(win.getBounds()))
+}
+
 autoUpdater.autoDownload = true
 autoUpdater.autoInstallOnAppQuit = true
 
 function createWindow() {
+  const saved = loadWindowState()
+  const validSaved = saved && isOnScreen(saved)
+
   mainWindow = new BrowserWindow({
     minWidth: 1470,
     minHeight: 750,
-    width: 1470,
-    height: 850,
+    width:  validSaved ? saved.width  : 1470,
+    height: validSaved ? saved.height : 850,
+    x:      validSaved ? saved.x      : undefined,
+    y:      validSaved ? saved.y      : undefined,
+    center: !validSaved,
     resizable: true,
-    center: true,
     frame: false,
     show: false,
     webPreferences: {
@@ -33,6 +69,16 @@ function createWindow() {
   })
 
   mainWindow.setMenuBarVisibility(false)
+
+  // Save position/size on move and resize (debounced)
+  let saveTimer
+  const debouncedSave = () => {
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => saveWindowState(mainWindow), 500)
+  }
+  mainWindow.on('move', debouncedSave)
+  mainWindow.on('resize', debouncedSave)
+  mainWindow.on('close', () => saveWindowState(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()

@@ -29,7 +29,7 @@ export function registerGameHandlers(mainWindow, appDataPath) {
 
     // 1. Java
     send('game:status', { text: 'Checking Java...', stage: 'java' })
-    const javaPath = await getOrDownloadJava(modpack.version, appDataPath, (status) => {
+    const javaPath = await getOrDownloadJava(modpack.mcVersion, appDataPath, (status) => {
       send('game:status', { text: status, stage: 'java' })
     })
 
@@ -68,7 +68,7 @@ export function registerGameHandlers(mainWindow, appDataPath) {
       authorization: authData,
       root: instancePath,
       version: {
-        number: modpack.version,
+        number: modpack.mcVersion,
         type: 'release',
         ...(modpack.loaderVersion ? { custom: modpack.loaderVersion } : {})
       },

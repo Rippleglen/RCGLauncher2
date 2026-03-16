@@ -58,7 +58,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha,prefix=sha-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v3' }}
 
       - name: Build and push image
         if: github.event_name == 'push'

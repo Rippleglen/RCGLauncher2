@@ -40,8 +40,11 @@ contextBridge.exposeInMainWorld("electron", {
   admin: {
     validateKey: (key) => ipcRenderer.invoke("admin:validateKey", key),
     saveModpack: (key, meta, isNew) => ipcRenderer.invoke("admin:saveModpack", key, meta, isNew),
-    pickFile: () => ipcRenderer.invoke("admin:pickFile"),
-    pushFiles: (key, modpackName, filePath) => ipcRenderer.invoke("admin:pushFiles", key, modpackName, filePath),
+    listFiles: (key, modpackName) => ipcRenderer.invoke("admin:listFiles", key, modpackName),
+    pickFiles: () => ipcRenderer.invoke("admin:pickFiles"),
+    uploadFile: (key, modpackName, category, filePath) => ipcRenderer.invoke("admin:uploadFile", key, modpackName, category, filePath),
+    deleteFile: (key, modpackName, category, filename) => ipcRenderer.invoke("admin:deleteFile", key, modpackName, category, filename),
+    updateTiers: (key, modpackName, tiers) => ipcRenderer.invoke("admin:updateTiers", key, modpackName, tiers),
     deleteModpack: (key, modpackName) => ipcRenderer.invoke("admin:deleteModpack", key, modpackName),
     regenerateManifest: (key, modpackName) => ipcRenderer.invoke("admin:regenerateManifest", key, modpackName)
   },

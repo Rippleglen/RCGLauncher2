@@ -49,17 +49,29 @@ export function registerSkinHandlers(appDataPath) {
     return res.json()
   })
 
-  // Fetch the Crafatar body render via main process and return as a data URL.
-  // This sidesteps any renderer-side network sandbox that blocks remote images.
-  ipcMain.handle('skins:getBodyRender', async (_, uuid) => {
+  // Fetch the user's currently active skin texture directly from Mojang's
+  // profile API, returning the PNG as a base64 data URL plus the variant
+  // (classic/slim) so the renderer can draw accurate arm widths.
+  ipcMain.handle('skins:getCurrentSkin', async () => {
     try {
-      const res = await fetch(
-        `https://crafatar.com/renders/body/${uuid}?overlay&scale=6`,
-        { headers: { 'User-Agent': 'RCGLauncher/2' } }
-      )
-      if (!res.ok) return null
-      const buf = Buffer.from(await res.arrayBuffer())
-      return `data:image/png;base64,${buf.toString('base64')}`
+      const authData = await getValidAuthData(appDataPath)
+      const profileRes = await fetch('https://api.minecraftservices.com/minecraft/profile', {
+        headers: { Authorization: `Bearer ${authData.access_token}` }
+      })
+      if (!profileRes.ok) return null
+      const profile = await profileRes.json()
+
+      const activeSkin = profile.skins?.find(s => s.state === 'ACTIVE')
+      if (!activeSkin?.url) return null
+
+      const skinRes = await fetch(activeSkin.url)
+      if (!skinRes.ok) return null
+
+      const buf = Buffer.from(await skinRes.arrayBuffer())
+      return {
+        dataUrl: `data:image/png;base64,${buf.toString('base64')}`,
+        variant: activeSkin.variant === 'SLIM' ? 'slim' : 'classic',
+      }
     } catch {
       return null
     }

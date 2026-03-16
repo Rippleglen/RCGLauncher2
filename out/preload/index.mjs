@@ -53,7 +53,7 @@ contextBridge.exposeInMainWorld("electron", {
   // Skin management
   skins: {
     list: (uuid) => ipcRenderer.invoke("skins:list", uuid),
-    getBodyRender: (uuid) => ipcRenderer.invoke("skins:getBodyRender", uuid),
+    getCurrentSkin: () => ipcRenderer.invoke("skins:getCurrentSkin"),
     pickFile: () => ipcRenderer.invoke("skins:pickFile"),
     upload: (uuid, skinType, label, path) => ipcRenderer.invoke("skins:upload", { uuid, skinType, label, filePath: path }),
     delete: (uuid, skinId) => ipcRenderer.invoke("skins:delete", { uuid, skinId }),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // ── Skin face preview ─────────────────────────────────────────────────────────
 
@@ -20,44 +20,100 @@ function SkinFace({ url, size = 56 }) {
   )
 }
 
-// ── Character preview panel ───────────────────────────────────────────────────
-// Fetches the Crafatar body render through the main process (avoids renderer
-// network sandbox) and displays as a data URL.
+// ── 2D skin canvas renderer ───────────────────────────────────────────────────
+// Draws a front-facing character from a standard 64×64 Minecraft skin PNG.
+// Uses the documented UV coordinates for base + overlay layers.
 
-function CharacterPanel({ uuid, activeSkin, name }) {
-  const [renderSrc, setRenderSrc] = useState(null)  // data URL or null
-  const [loading, setLoading]     = useState(true)
+function SkinCanvas({ dataUrl, variant, height = 160 }) {
+  const canvasRef = useRef(null)
 
   useEffect(() => {
-    if (!uuid) return
+    if (!dataUrl || !canvasRef.current) return
+    const canvas = canvasRef.current
+    const ctx    = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.imageSmoothingEnabled = false
+
+    const img = new Image()
+    img.onload = () => {
+      const slim = variant === 'slim'
+      const aw   = slim ? 3 : 4   // arm width in skin pixels
+      const s    = height / 32    // scale: 1 skin pixel → s canvas pixels
+
+      // Helper: drawImage(skin region) → canvas position
+      const d = (dx, dy, dw, dh, sx, sy, sw, sh) =>
+        ctx.drawImage(img, sx, sy, sw, sh, dx * s, dy * s, dw * s, dh * s)
+
+      // ── Base layers ──────────────────────────────────────────────────────
+      d(4,        0,  8,  8,   8, 8,  8,  8)  // head
+      d(4,        8,  8, 12,  20, 20, 8, 12)  // body
+      d(0,        8, aw, 12,  44, 20, aw, 12) // right arm (viewer's left)
+      d(16 - aw,  8, aw, 12,  36, 52, aw, 12) // left arm  (viewer's right)
+      d(4,       20,  4, 12,   4, 20, 4, 12)  // right leg
+      d(8,       20,  4, 12,  20, 52, 4, 12)  // left leg
+
+      // ── Overlay layers ───────────────────────────────────────────────────
+      d(4,        0,  8,  8,  40, 8,  8,  8)  // head hat
+      d(4,        8,  8, 12,  20, 36, 8, 12)  // body overlay
+      d(0,        8, aw, 12,  44, 36, aw, 12) // right arm overlay
+      d(16 - aw,  8, aw, 12,  52, 52, aw, 12) // left arm overlay
+      d(4,       20,  4, 12,   4, 36, 4, 12)  // right leg overlay
+      d(8,       20,  4, 12,   4, 52, 4, 12)  // left leg overlay
+    }
+    img.src = dataUrl
+  }, [dataUrl, variant, height])
+
+  const s = height / 32
+  return (
+    <canvas
+      ref={canvasRef}
+      width={Math.round(16 * s)}
+      height={height}
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
+// ── Character preview panel ───────────────────────────────────────────────────
+// Fetches the skin texture from Mojang's profile API via the main process
+// (auth token available there) then renders it with SkinCanvas.
+
+function CharacterPanel({ activeSkin, name }) {
+  const [skin, setSkin]       = useState(null)  // { dataUrl, variant }
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
     setLoading(true)
-    setRenderSrc(null)
-    window.electron.skins.getBodyRender(uuid)
-      .then(src => setRenderSrc(src))
+    setSkin(null)
+    window.electron.skins.getCurrentSkin()
+      .then(result => setSkin(result))
       .finally(() => setLoading(false))
-  }, [uuid])
+  }, [])
+
+  // Refresh the preview after a skin is applied
+  useEffect(() => {
+    if (!activeSkin) return
+    setLoading(true)
+    setSkin(null)
+    window.electron.skins.getCurrentSkin()
+      .then(result => setSkin(result))
+      .finally(() => setLoading(false))
+  }, [activeSkin?.id])
 
   return (
     <div className="flex flex-col items-center gap-4 w-44 shrink-0">
       <div className="w-full bg-surface-800 border border-surface-600 rounded-xl
                       flex flex-col items-center pt-6 pb-4 gap-3">
-        {/* Character render */}
         <div className="flex items-end justify-center" style={{ height: 160 }}>
           {loading ? (
             <i className="fa-solid fa-spinner fa-spin text-2xl text-gray-600" />
-          ) : renderSrc ? (
-            <img
-              src={renderSrc}
-              alt="Current skin"
-              style={{ imageRendering: 'pixelated', maxHeight: 160 }}
-              draggable={false}
-            />
+          ) : skin ? (
+            <SkinCanvas dataUrl={skin.dataUrl} variant={skin.variant} height={160} />
           ) : (
             <i className="fa-solid fa-person text-5xl text-gray-600 mb-2" />
           )}
         </div>
 
-        {/* Name + active skin label */}
         <div className="text-center px-3 min-w-0 w-full">
           <p className="text-sm font-semibold text-white truncate">{name || 'Player'}</p>
           {activeSkin && (
@@ -67,7 +123,7 @@ function CharacterPanel({ uuid, activeSkin, name }) {
       </div>
 
       <p className="text-[10px] text-gray-600 text-center leading-snug">
-        Reflects your currently active Mojang skin
+        Your currently active Mojang skin
       </p>
     </div>
   )
@@ -319,7 +375,7 @@ export default function SkinsView({ user }) {
         <div className="flex gap-6 items-start">
           {/* Character preview — sticky as user scrolls the library */}
           <div className="sticky top-0">
-            <CharacterPanel uuid={uuid} activeSkin={activeSkin} name={user?.name} />
+            <CharacterPanel activeSkin={activeSkin} name={user?.name} />
           </div>
 
           {/* Skin library */}

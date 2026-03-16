@@ -11,6 +11,7 @@ import (
 	"github.com/rippleglen/rcg-backend/internal/store"
 )
 
+// Version: includes /admin/ping endpoint for key validation.
 func main() {
 	cfg := config()
 

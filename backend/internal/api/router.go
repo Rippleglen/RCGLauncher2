@@ -74,6 +74,12 @@ func NewRouter(cfg Config) http.Handler {
 		mux.Post("/admin/modpacks/{name}/push", r.adminPushFiles)
 		mux.Post("/admin/modpacks/{name}/regenerate", r.adminRegenerateManifest)
 		mux.Delete("/admin/modpacks/{name}", r.adminDeleteModpack)
+
+		// Per-file management
+		mux.Get("/admin/modpacks/{name}/files", r.adminListFiles)
+		mux.Put("/admin/modpacks/{name}/files/{category}/{filename}", r.adminUploadFile)
+		mux.Delete("/admin/modpacks/{name}/files/{category}/{filename}", r.adminDeleteFile)
+		mux.Put("/admin/modpacks/{name}/tiers", r.adminSetTiers)
 	})
 
 	return mux

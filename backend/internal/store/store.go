@@ -31,6 +31,16 @@ func (s *Store) SkinsDir() string {
 	return filepath.Join(s.dataDir, "skins")
 }
 
+// FileInfo describes a single file in a modpack category.
+type FileInfo struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+	Hash string `json:"hash"`
+}
+
+// CategoryFiles maps category name → file list.
+type CategoryFiles map[string][]FileInfo
+
 // --- Modpack manifest ---
 
 // Manifest is the server's source of truth for a modpack's files.
@@ -162,6 +172,137 @@ func (s *Store) ListModpacks() ([]ModpackMeta, error) {
 		packs = append(packs, *meta)
 	}
 	return packs, nil
+}
+
+// ListFiles returns all managed files grouped by category.
+func (s *Store) ListFiles(modpackName string) (CategoryFiles, error) {
+	base := s.ModpackDir(modpackName)
+	result := CategoryFiles{
+		"mods":         {},
+		"config":       {},
+		"resourcepacks": {},
+		"shaderpacks":  {},
+	}
+
+	manifest, _ := s.ReadManifest(modpackName)
+	fileHashes := map[string]string{}
+	if manifest != nil {
+		fileHashes = manifest.Files
+	}
+
+	for cat := range result {
+		dir := filepath.Join(base, cat)
+		entries, err := os.ReadDir(dir)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			result[cat] = append(result[cat], FileInfo{
+				Name: e.Name(),
+				Size: info.Size(),
+				Hash: fileHashes[cat+"/"+e.Name()],
+			})
+		}
+	}
+	return result, nil
+}
+
+// SaveFile writes a single file into a category directory and updates the manifest.
+func (s *Store) SaveFile(modpackName, category, filename string, r io.Reader) error {
+	allowed := map[string]bool{"mods": true, "config": true, "resourcepacks": true, "shaderpacks": true}
+	if !allowed[category] {
+		return fmt.Errorf("invalid category %q", category)
+	}
+	filename = filepath.Base(filename)
+	if filename == "" || filename == "." {
+		return fmt.Errorf("invalid filename")
+	}
+
+	dir := filepath.Join(s.ModpackDir(modpackName), category)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	dest := filepath.Join(dir, filename)
+	f, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, r); err != nil {
+		f.Close()
+		return err
+	}
+	f.Close()
+
+	hash, err := hashFile(dest)
+	if err != nil {
+		return err
+	}
+	manifest, err := s.ReadManifest(modpackName)
+	if err != nil {
+		manifest = &Manifest{Files: map[string]string{}}
+	}
+	manifest.Files[category+"/"+filename] = hash
+	return s.WriteManifest(modpackName, manifest)
+}
+
+// DeleteFile removes a file from a category and updates the manifest.
+func (s *Store) DeleteFile(modpackName, category, filename string) error {
+	allowed := map[string]bool{"mods": true, "config": true, "resourcepacks": true, "shaderpacks": true}
+	if !allowed[category] {
+		return fmt.Errorf("invalid category %q", category)
+	}
+	filename = filepath.Base(filename)
+	fullPath := filepath.Join(s.ModpackDir(modpackName), category, filename)
+	if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	manifest, err := s.ReadManifest(modpackName)
+	if err != nil {
+		return nil
+	}
+	delete(manifest.Files, category+"/"+filename)
+	return s.WriteManifest(modpackName, manifest)
+}
+
+// ReadTiers reads mod tier assignments (required/suggested/optional) for a modpack.
+func (s *Store) ReadTiers(modpackName string) (map[string]string, error) {
+	path := filepath.Join(s.ModpackDir(modpackName), "tiers.json")
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return map[string]string{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var tiers map[string]string
+	if err := json.Unmarshal(data, &tiers); err != nil {
+		return nil, err
+	}
+	return tiers, nil
+}
+
+// WriteTiers saves mod tier assignments for a modpack.
+func (s *Store) WriteTiers(modpackName string, tiers map[string]string) error {
+	dir := s.ModpackDir(modpackName)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(tiers, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "tiers.json"), data, 0644)
 }
 
 // --- Sync: compute diff and build update zip ---

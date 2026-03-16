@@ -1,6 +1,6 @@
 import { ipcMain, dialog } from 'electron'
 import { readFileSync } from 'fs'
-import FormData from 'form-data'
+import path from 'path'
 
 const API_BASE = 'https://minecraft.eggonomicsgame.com'
 
@@ -28,34 +28,63 @@ export function registerAdminHandlers() {
     return await res.json()
   })
 
-  // Open a file picker and return the selected path
-  ipcMain.handle('admin:pickFile', async (event) => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
-      title: 'Select modpack ZIP',
-      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
-      properties: ['openFile'],
-    })
-    if (canceled) return null
-    return filePaths[0]
+  // List files for a modpack, grouped by category
+  ipcMain.handle('admin:listFiles', async (_, key, modpackName) => {
+    const res = await fetch(
+      `${API_BASE}/admin/modpacks/${encodeURIComponent(modpackName)}/files`,
+      { headers: { 'X-Admin-Key': key } }
+    )
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
   })
 
-  // Upload a zip file to the backend for a given modpack
-  ipcMain.handle('admin:pushFiles', async (_, key, modpackName, filePath) => {
-    const fileBuffer = readFileSync(filePath)
+  // Open a multi-file picker (any file type)
+  ipcMain.handle('admin:pickFiles', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Select files to upload',
+      properties: ['openFile', 'multiSelections'],
+    })
+    return canceled ? [] : filePaths
+  })
 
+  // Upload a single file to a modpack category
+  ipcMain.handle('admin:uploadFile', async (_, key, modpackName, category, filePath) => {
+    const filename = path.basename(filePath)
+    const data = readFileSync(filePath)
     const res = await fetch(
-      `${API_BASE}/admin/modpacks/${encodeURIComponent(modpackName)}/push`,
+      `${API_BASE}/admin/modpacks/${encodeURIComponent(modpackName)}/files/${category}/${encodeURIComponent(filename)}`,
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/zip',
-          'X-Admin-Key': key,
-        },
-        body: fileBuffer,
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Admin-Key': key },
+        body: data,
       }
     )
     if (!res.ok) throw new Error(await res.text())
-    return await res.json()
+    return res.json()
+  })
+
+  // Delete a single file from a modpack category
+  ipcMain.handle('admin:deleteFile', async (_, key, modpackName, category, filename) => {
+    const res = await fetch(
+      `${API_BASE}/admin/modpacks/${encodeURIComponent(modpackName)}/files/${category}/${encodeURIComponent(filename)}`,
+      { method: 'DELETE', headers: { 'X-Admin-Key': key } }
+    )
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  })
+
+  // Save tier assignments (required/suggested/optional) for a modpack's mods
+  ipcMain.handle('admin:updateTiers', async (_, key, modpackName, tiers) => {
+    const res = await fetch(
+      `${API_BASE}/admin/modpacks/${encodeURIComponent(modpackName)}/tiers`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': key },
+        body: JSON.stringify(tiers),
+      }
+    )
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
   })
 
   // Delete a modpack
@@ -68,7 +97,7 @@ export function registerAdminHandlers() {
     return await res.json()
   })
 
-  // Regenerate the manifest (useful after manually editing files on the server)
+  // Regenerate the manifest from files currently on the server
   ipcMain.handle('admin:regenerateManifest', async (_, key, modpackName) => {
     const res = await fetch(
       `${API_BASE}/admin/modpacks/${encodeURIComponent(modpackName)}/regenerate`,

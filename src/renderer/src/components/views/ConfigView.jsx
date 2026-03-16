@@ -28,7 +28,7 @@ export default function ConfigView({ modpack }) {
   }
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="h-full overflow-y-auto p-6"><div className="max-w-2xl">
       <h1 className="text-lg font-semibold mb-3 pb-2 border-b border-surface-600">
         Configuration — {modpack.name}
       </h1>
@@ -87,6 +87,6 @@ export default function ConfigView({ modpack }) {
           </p>
         </div>
       </div>
-    </div>
+    </div></div>
   )
 }

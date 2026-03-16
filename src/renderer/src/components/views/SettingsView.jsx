@@ -54,7 +54,7 @@ export default function SettingsView({ user, adminKey, onAdminUnlock }) {
   }
 
   return (
-    <div className="p-6 max-w-2xl space-y-4">
+    <div className="h-full overflow-y-auto p-6"><div className="max-w-2xl space-y-4">
       <div className="bg-surface-800 rounded p-4 border border-surface-600">
         <h2 className="text-base font-semibold mb-1">Settings</h2>
       </div>
@@ -167,6 +167,6 @@ export default function SettingsView({ user, adminKey, onAdminUnlock }) {
       </div>
 
       <div className="text-xs text-gray-600 pl-1">v{version}</div>
-    </div>
+    </div></div>
   )
 }

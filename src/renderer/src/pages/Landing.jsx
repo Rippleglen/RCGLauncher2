@@ -49,7 +49,7 @@ export default function Landing({ user, onLogout, adminKey, onAdminUnlock }) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-surface-700 font-sans overflow-hidden">
+    <div className="flex flex-col h-screen bg-surface-700 font-sans overflow-hidden select-none">
       <Titlebar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -73,7 +73,7 @@ export default function Landing({ user, onLogout, adminKey, onAdminUnlock }) {
               tabs={MODPACK_TABS}
             />
           )}
-          <main className="flex-1 overflow-y-auto bg-surface-700">
+          <main className="flex-1 overflow-hidden bg-surface-700">
             {renderContent()}
           </main>
         </div>

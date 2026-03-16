@@ -41,7 +41,7 @@ export default function PatchNotesView({ modpack }) {
   }
 
   return (
-    <div className="p-6">
+    <div className="h-full overflow-y-auto p-6">
       <h1 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-600">Patch Notes</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {posts.map((post, i) => (

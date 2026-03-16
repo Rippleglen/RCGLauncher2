@@ -6,23 +6,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        // RCG palette — matches existing UI
         surface: {
-          900: '#1e1e1e',
-          800: '#252525',
-          700: '#303030',
-          600: '#3a3a3a',
-          500: '#444444',
+          900: '#0f0f13',   // titlebar, sidebar
+          800: '#16161b',   // panels, cards
+          700: '#1c1c23',   // main content bg
+          600: '#25252d',   // borders, dividers
+          500: '#32323c',   // hover states
         },
         accent: {
-          DEFAULT: '#008542',
-          hover: '#00a050',
-          muted: 'rgba(10, 152, 81, 0.192)',
+          DEFAULT: '#16c653',
+          hover:   '#1ad45b',
+          muted:   'rgba(22, 198, 83, 0.12)',
         }
       },
       fontFamily: {
-        sans: ['Open Sans', 'sans-serif'],
-      }
+        sans: ['Inter', 'sans-serif'],
+      },
     },
   },
   plugins: [],

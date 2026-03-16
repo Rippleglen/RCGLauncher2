@@ -12,36 +12,39 @@
   html, body, #root {
     height: 100%;
     width: 100%;
-    font-family: 'Open Sans', sans-serif;
-    background-color: #303030;
+    font-family: 'Inter', sans-serif;
+    background-color: #1c1c23;
     color: #e2e8f0;
   }
+
+  /* Custom scrollbar — thin, dark, consistent */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #32323c; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #44444f; }
 }
 
 @layer components {
-  /* Sidebar nav button — matches existing .button style */
+  /* ── Sidebar nav button ───────────────────────────────────────────────────── */
   .nav-btn {
-    @apply flex items-center gap-3 w-full px-3 py-2 text-white text-sm font-normal
-           bg-surface-900 transition-all duration-200 cursor-pointer select-none;
-    border-top: 2px solid #3a3a3a;
-    border-bottom: 2px solid #111;
+    @apply flex items-center gap-3 w-full px-3 py-2 text-[#9999aa] text-sm font-normal
+           transition-colors duration-150 cursor-pointer select-none;
+    border-left: 2px solid transparent;
   }
 
   .nav-btn:hover {
-    @apply bg-surface-700;
+    @apply bg-white/[0.05] text-white;
   }
 
   .nav-btn.active {
-    @apply font-bold bg-[#1f1f1f];
-    border-top: 2px solid #111;
-    border-bottom: 2px solid #3a3a3a;
-    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.8);
+    @apply bg-white/[0.08] text-white font-medium;
+    border-left-color: theme('colors.accent.DEFAULT');
   }
 
-  /* Horizontal sub-nav tab */
+  /* ── Horizontal sub-nav tab ──────────────────────────────────────────────── */
   .tab-btn {
-    @apply relative pb-2 px-3 text-[#c2cccb] text-base font-normal
-           cursor-pointer border-none bg-transparent transition-colors duration-200;
+    @apply relative pb-2.5 px-4 text-[#8888aa] text-sm font-normal
+           cursor-pointer border-none bg-transparent transition-colors duration-150;
   }
 
   .tab-btn:hover {
@@ -49,19 +52,19 @@
   }
 
   .tab-btn.active {
-    @apply text-white font-bold;
+    @apply text-white font-semibold;
   }
 
-  /* Play button — matches existing style */
+  /* ── Play button ─────────────────────────────────────────────────────────── */
   .play-btn {
-    @apply relative flex items-center justify-center w-[250px] h-[55px]
+    @apply relative flex items-center justify-center w-[220px] h-[50px]
            bg-transparent border-none cursor-pointer;
   }
 
   .play-btn::after {
     content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none;
-    background-color: rgba(10, 152, 81, 0.192);
+    @apply absolute inset-0 opacity-0 transition-opacity duration-200 pointer-events-none;
+    background-color: rgba(255, 255, 255, 0.12);
     mask-image: url(../../assets/playbutton.png);
     mask-size: contain;
     mask-repeat: no-repeat;
@@ -70,5 +73,9 @@
 
   .play-btn:hover::after {
     @apply opacity-100;
+  }
+
+  .play-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
   }
 }

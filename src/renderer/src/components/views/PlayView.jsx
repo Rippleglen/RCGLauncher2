@@ -1,27 +1,17 @@
 import { useState, useEffect } from 'react'
 
-const STAGES = {
-  idle: null,
-  java: 'Checking Java...',
-  sync: 'Syncing files...',
-  launch: 'Launching...',
-  running: 'Game running',
-}
-
 export default function PlayView({ modpack }) {
-  const [stage, setStage] = useState('idle')
+  const [stage, setStage]         = useState('idle')
   const [statusText, setStatusText] = useState('')
-  const [progress, setProgress] = useState(0)
+  const [progress, setProgress]   = useState(0)
 
   useEffect(() => {
-    // Reset state when modpack changes
     setStage('idle')
     setStatusText('')
     setProgress(0)
 
     window.electron.game.onStatus((data) => {
       setStatusText(data.text)
-      // 'error' stage resets to idle so the play button is clickable again
       setStage(data.stage === 'error' ? 'idle' : (data.stage ?? 'running'))
     })
 
@@ -50,51 +40,74 @@ export default function PlayView({ modpack }) {
   }
 
   const isLaunching = stage !== 'idle' && stage !== 'running'
-  const isRunning = stage === 'running'
+  const isRunning   = stage === 'running'
+
+  const heroImage = modpack.heroImage || '../../assets/hero.png'
 
   return (
-    <div className="flex flex-col">
-      {/* Hero image */}
-      <div className="relative w-full h-[400px] overflow-hidden">
+    <div className="flex flex-col h-full">
+
+      {/* ── Hero — fills available height ─────────────────────────────────── */}
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         <img
-          src={modpack.heroImage ?? '../../assets/hero.png'}
+          src={heroImage}
           alt={modpack.name}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
         />
+
+        {/* Gradient overlay — dark at bottom where text sits */}
+        <div className="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/30 to-transparent" />
+
+        {/* Modpack name + description over the hero */}
+        <div className="absolute bottom-0 left-0 right-0 px-6 pb-5">
+          <h1 className="text-2xl font-bold text-white drop-shadow-lg">
+            {modpack.displayName || modpack.name}
+          </h1>
+          {modpack.description && (
+            <p className="mt-1 text-sm text-gray-400 line-clamp-2 max-w-lg">
+              {modpack.description}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Play button area */}
-      <div className="flex flex-col items-center py-4 bg-surface-900">
+      {/* ── Play bar ──────────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex flex-col items-center justify-center gap-2.5
+                      bg-surface-900 border-t border-surface-600/40 py-4">
         <button
           className="play-btn"
           onClick={handlePlay}
           disabled={isLaunching || isRunning}
         >
-          <img src="../../assets/playbutton.png" className="absolute inset-0 w-full h-full object-contain" />
-          <span className="relative z-10 text-white font-semibold text-xl tracking-wide drop-shadow">
-            {isRunning ? 'Playing' : isLaunching ? '...' : 'Play'}
+          <img
+            src="../../assets/playbutton.png"
+            className="absolute inset-0 w-full h-full object-contain"
+            alt=""
+          />
+          <span className="relative z-10 text-white font-semibold text-lg tracking-widest drop-shadow">
+            {isRunning ? 'PLAYING' : isLaunching ? '...' : 'PLAY'}
           </span>
         </button>
 
-        {/* Progress bar — only visible when launching */}
+        {/* Progress — only during launch */}
         {(isLaunching || isRunning) && (
-          <div className="mt-3 w-64 flex flex-col items-center gap-1">
-            <div className="w-full h-1.5 bg-surface-600 rounded overflow-hidden">
+          <div className="flex flex-col items-center gap-1.5 w-56">
+            <div className="w-full h-1 bg-surface-600 rounded-full overflow-hidden">
               <div
-                className="h-full bg-accent transition-all duration-300"
+                className="h-full bg-accent rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">{statusText}</p>
+            <p className="text-xs text-[#6666aa]">{statusText}</p>
           </div>
+        )}
+
+        {/* Idle error or status text */}
+        {stage === 'idle' && statusText && (
+          <p className="text-xs text-red-400">{statusText}</p>
         )}
       </div>
 
-      {/* Modpack info */}
-      <div className="px-6 py-4">
-        <h1 className="text-xl font-semibold mb-2">{modpack.name}</h1>
-        <p className="text-gray-400 text-sm">{modpack.description}</p>
-      </div>
     </div>
   )
 }

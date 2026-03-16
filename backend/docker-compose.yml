@@ -1,0 +1,22 @@
+services:
+  rcg-backend:
+    image: ghcr.io/rippleglen/rcg-backend:latest
+    container_name: rcg-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - rcg-data:/app/data
+    environment:
+      - PORT=8080
+      - DATA_DIR=/app/data
+      - ADMIN_KEY=${ADMIN_KEY:?ADMIN_KEY must be set}
+      - BASE_URL=${BASE_URL:-http://localhost:8080}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/modpacks"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  rcg-data:

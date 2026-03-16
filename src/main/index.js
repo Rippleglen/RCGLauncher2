@@ -8,6 +8,7 @@ import { registerAuthHandlers } from './ipc/auth'
 import { registerGameHandlers } from './ipc/game'
 import { registerConfigHandlers } from './ipc/config'
 import { registerAdminHandlers } from './ipc/admin'
+import { registerSkinHandlers } from './ipc/skins'
 
 export const appDataPath = join(app.getPath('appData'), '.RCGLauncher2')
 
@@ -160,6 +161,7 @@ app.whenReady().then(() => {
   registerGameHandlers(mainWindow, appDataPath)
   registerConfigHandlers(appDataPath)
   registerAdminHandlers()
+  registerSkinHandlers(appDataPath)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

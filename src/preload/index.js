@@ -55,6 +55,15 @@ contextBridge.exposeInMainWorld('electron', {
     regenerateManifest: (key, modpackName) => ipcRenderer.invoke('admin:regenerateManifest', key, modpackName),
   },
 
+  // Skin management
+  skins: {
+    list:     (uuid)                          => ipcRenderer.invoke('skins:list', uuid),
+    pickFile: ()                              => ipcRenderer.invoke('skins:pickFile'),
+    upload:   (uuid, skinType, label, path)   => ipcRenderer.invoke('skins:upload', { uuid, skinType, label, filePath: path }),
+    delete:   (uuid, skinId)                  => ipcRenderer.invoke('skins:delete', { uuid, skinId }),
+    apply:    (skinUrl, skinType)             => ipcRenderer.invoke('skins:apply', { skinUrl, skinType }),
+  },
+
   // Updater — pull based: call check(), await it, listen for status updates
   updater: {
     check: () => ipcRenderer.invoke('updater:check'),

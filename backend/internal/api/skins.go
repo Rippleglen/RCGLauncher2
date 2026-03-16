@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -113,7 +114,7 @@ func (r *router) listSkins(w http.ResponseWriter, req *http.Request) {
 	jsonOK(w, result)
 }
 
-// deleteSkin removes a skin record and its file.
+// deleteSkin removes a skin record and its file on disk.
 // DELETE /users/{uuid}/skins/{id}
 func (r *router) deleteSkin(w http.ResponseWriter, req *http.Request) {
 	uuid := chi.URLParam(req, "uuid")
@@ -122,9 +123,25 @@ func (r *router) deleteSkin(w http.ResponseWriter, req *http.Request) {
 		jsonError(w, "invalid skin id", http.StatusBadRequest)
 		return
 	}
+
+	// Resolve filename before deleting the DB record
+	skins, _ := r.cfg.DB.GetSkins(uuid)
+	var filename string
+	for _, s := range skins {
+		if s.ID == id {
+			filename = s.Filename
+			break
+		}
+	}
+
 	if err := r.cfg.DB.DeleteSkin(uuid, id); err != nil {
 		jsonError(w, "failed to delete skin", http.StatusInternalServerError)
 		return
 	}
+
+	if filename != "" {
+		os.Remove(r.cfg.Store.SkinPath(uuid, filename))
+	}
+
 	jsonOK(w, map[string]string{"status": "deleted"})
 }

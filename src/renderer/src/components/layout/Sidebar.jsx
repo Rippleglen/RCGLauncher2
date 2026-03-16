@@ -4,8 +4,8 @@ export default function Sidebar({ modpacks, selected, activeView, onSelectModpac
   return (
     <nav className="flex flex-col w-48 bg-surface-900 border-r border-surface-600/50 shrink-0 overflow-y-auto">
       {/* Logo */}
-      <div className="flex justify-center py-4 px-4 border-b border-surface-600/40">
-        <img src={logoUrl} alt="RCG" className="w-10 opacity-90" style={{ imageRendering: 'pixelated' }} />
+      <div className="flex items-center py-3 px-3 border-b border-surface-600/40">
+        <img src={logoUrl} alt="RCG" className="w-14 opacity-90" style={{ imageRendering: 'pixelated' }} />
       </div>
 
       <div className="flex-1 flex flex-col overflow-y-auto">

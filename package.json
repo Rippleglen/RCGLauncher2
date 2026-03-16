@@ -1,46 +1,42 @@
 {
-  "name": "RCGLauncher",
-  "version": "v1.1.4",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "build:css": "npx tailwindcss -i ./src/tailwind.css -o ./styles/tailwind-output.css --watch"
-  },
+  "name": "rcg-launcher",
+  "version": "3.0.0",
+  "description": "RippleCo Games Minecraft Launcher",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "author": "Taylor Roberts",
+  "license": "ISC",
   "repository": "https://github.com/Rippleglen/RCGLauncher2",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "dist": "electron-vite build && electron-builder",
+    "preview": "electron-vite preview"
+  },
   "publish": {
     "provider": "github",
     "releaseType": "release"
   },
-  "keywords": [],
-  "author": "Taylor Roberts",
-  "license": "ISC",
-  "description": "",
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
-    "babel-loader": "^9.2.1",
     "electron": "^33.0.2",
     "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
-    "webpack": "^5.95.0",
-    "webpack-cli": "^5.1.4"
+    "vite": "^5.4.0"
   },
   "dependencies": {
-    "@azure/msal-node": "^2.15.0",
+    "@electron-toolkit/utils": "^4.0.0",
     "axios": "^1.7.7",
-    "dotenv": "^16.4.5",
-    "ejs": "^3.1.10",
-    "ejs-electron": "^3.0.0",
     "electron-updater": "^6.3.9",
     "extract-zip": "^2.0.1",
     "keytar": "^7.9.0",
     "minecraft-launcher-core": "^3.18.1",
-    "msal": "^1.4.18",
-    "msal-node": "^0.0.1-security",
-    "node-fetch": "^3.3.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "rss-parser": "^3.13.0",
-    "skinview3d": "^3.1.0",
-    "unzipper": "^0.12.3"
+    "skinview3d": "^3.1.0"
   }
 }

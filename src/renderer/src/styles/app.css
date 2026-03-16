@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    font-family: 'Open Sans', sans-serif;
+    background-color: #303030;
+    color: #e2e8f0;
+  }
+}
+
+@layer components {
+  /* Sidebar nav button — matches existing .button style */
+  .nav-btn {
+    @apply flex items-center gap-3 w-full px-3 py-2 text-white text-sm font-normal
+           bg-surface-900 transition-all duration-200 cursor-pointer select-none;
+    border-top: 2px solid #3a3a3a;
+    border-bottom: 2px solid #111;
+  }
+
+  .nav-btn:hover {
+    @apply bg-surface-700;
+  }
+
+  .nav-btn.active {
+    @apply font-bold bg-[#1f1f1f];
+    border-top: 2px solid #111;
+    border-bottom: 2px solid #3a3a3a;
+    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.8);
+  }
+
+  /* Horizontal sub-nav tab */
+  .tab-btn {
+    @apply relative pb-2 px-3 text-[#c2cccb] text-base font-normal
+           cursor-pointer border-none bg-transparent transition-colors duration-200;
+  }
+
+  .tab-btn:hover {
+    @apply text-white;
+  }
+
+  .tab-btn.active {
+    @apply text-white font-bold;
+  }
+
+  /* Play button — matches existing style */
+  .play-btn {
+    @apply relative flex items-center justify-center w-[250px] h-[55px]
+           bg-transparent border-none cursor-pointer;
+  }
+
+  .play-btn::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300 pointer-events-none;
+    background-color: rgba(10, 152, 81, 0.192);
+    mask-image: url(../../assets/playbutton.png);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+  }
+
+  .play-btn:hover::after {
+    @apply opacity-100;
+  }
+}

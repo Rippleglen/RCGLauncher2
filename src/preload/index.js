@@ -38,8 +38,9 @@ contextBridge.exposeInMainWorld('electron', {
     set: (updates) => ipcRenderer.invoke('config:set', updates),
     getSystemRam: () => ipcRenderer.invoke('config:getSystemRam'),
     getVersion: () => ipcRenderer.invoke('config:getVersion'),
-    getJvmArgs: (modpackName) => ipcRenderer.invoke('config:getJvmArgs', modpackName),
-    setJvmArgs: (modpackName, args) => ipcRenderer.invoke('config:setJvmArgs', modpackName, args),
+    getJvmArgs:         (modpackName) => ipcRenderer.invoke('config:getJvmArgs', modpackName),
+    setJvmArgs:         (modpackName, args) => ipcRenderer.invoke('config:setJvmArgs', modpackName, args),
+    getDefaultJvmFlags: (mcVersion)   => ipcRenderer.invoke('config:getDefaultJvmFlags', mcVersion),
   },
 
   // Admin / authoring tool

@@ -85,6 +85,65 @@ async function installJava(majorVersion, javaDir, onStatus) {
   return finalPath
 }
 
+// ── Shared helpers used by game.js and config.js ─────────────────────────────
+
+// Determine Java major version from Minecraft version string without a network
+// call — used for instant default-flag generation in the config UI.
+export function javaVersionFromMcVersion(mcVersion) {
+  const m = mcVersion.match(/^1\.(\d+)(?:\.(\d+))?/)
+  if (!m) return 17
+  const minor = parseInt(m[1])
+  const patch = parseInt(m[2] ?? '0')
+  if (minor > 20 || (minor === 20 && patch >= 5)) return 21
+  if (minor >= 17) return 17
+  return 8
+}
+
+// Default JVM flags keyed by Java major version.
+// Java 17/21 + GraalVM: ZGC eliminates pause tuning entirely.
+// Java 8 (legacy, Adoptium): G1GC client-tuned — 37ms pause target vs
+// Aikar's server-oriented 200ms.
+export function defaultJvmFlags(majorVersion) {
+  const flags = ['--add-modules=jdk.incubator.vector']
+
+  if (majorVersion >= 17) {
+    flags.push(
+      '-XX:+UseZGC',
+      '-XX:+UnlockExperimentalVMOptions',
+      '-XX:+DisableExplicitGC',
+      '-XX:+AlwaysPreTouch',
+      '-XX:+PerfDisableSharedMem',
+      '-XX:+UseNUMA',
+    )
+    if (majorVersion >= 21) {
+      flags.push('-XX:+ZGenerational')
+    }
+  } else {
+    flags.push(
+      '-XX:+UseG1GC',
+      '-XX:+ParallelRefProcEnabled',
+      '-XX:MaxGCPauseMillis=37',
+      '-XX:+UnlockExperimentalVMOptions',
+      '-XX:+DisableExplicitGC',
+      '-XX:+AlwaysPreTouch',
+      '-XX:G1HeapWastePercent=5',
+      '-XX:G1MixedGCCountTarget=4',
+      '-XX:InitiatingHeapOccupancyPercent=15',
+      '-XX:G1MixedGCLiveThresholdPercent=90',
+      '-XX:G1RSetUpdatingPauseTimePercent=5',
+      '-XX:SurvivorRatio=32',
+      '-XX:+PerfDisableSharedMem',
+      '-XX:MaxTenuringThreshold=1',
+      '-XX:G1NewSizePercent=20',
+      '-XX:G1MaxNewSizePercent=40',
+      '-XX:G1HeapRegionSize=16M',
+      '-XX:G1ReservePercent=20',
+    )
+  }
+
+  return flags
+}
+
 // Returns { javaPath, majorVersion } so the caller can pick the right JVM flags.
 export async function getOrDownloadJava(minecraftVersion, appDataPath, onStatus) {
   const javaDir      = join(appDataPath, 'launcher', 'java')

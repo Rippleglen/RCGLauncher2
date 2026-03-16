@@ -2,6 +2,7 @@ import { ipcMain, app } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import os from 'os'
+import { javaVersionFromMcVersion, defaultJvmFlags } from '../services/javaManager'
 
 export function registerConfigHandlers(appDataPath) {
   const configPath = join(appDataPath, 'config.json')
@@ -46,6 +47,13 @@ export function registerConfigHandlers(appDataPath) {
     } catch {
       return []
     }
+  })
+
+  // Returns the recommended default flags for the given Minecraft version.
+  // Used by ConfigView to pre-populate the JVM args field on first open.
+  ipcMain.handle('config:getDefaultJvmFlags', (_, mcVersion) => {
+    const javaVersion = javaVersionFromMcVersion(mcVersion)
+    return defaultJvmFlags(javaVersion)
   })
 
   ipcMain.handle('config:setJvmArgs', (_, modpackName, args) => {

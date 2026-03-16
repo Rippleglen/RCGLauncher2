@@ -1,4 +1,3 @@
-// Migrated from components/metadataSync.js
 import { existsSync, readFileSync, createWriteStream, unlinkSync } from 'fs'
 import { readdir, mkdir } from 'fs/promises'
 import { join, relative } from 'path'
@@ -9,7 +8,7 @@ import extract from 'extract-zip'
 
 export const eventEmitter = new EventEmitter()
 
-const API_BASE = 'https://launcherapi.ripple-co.io'
+const API_BASE = 'https://minecraft.eggonomicsgame.com'
 
 const MANAGED_DIRS = ['mods', 'config', 'resourcepacks', 'shaderpacks', 'ffmpeg']
 
@@ -44,75 +43,78 @@ async function getLocalFiles(instancePath) {
   return files
 }
 
-async function downloadChunked(packageId, destPath) {
-  const infoRes = await fetch(`${API_BASE}/download/${packageId}/info`)
-  if (!infoRes.ok) throw new Error('Failed to get package info')
-  const { totalChunks } = await infoRes.json()
+async function downloadZip(url, destPath) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Download failed: ${res.statusText}`)
+
+  const total = Number(res.headers.get('content-length')) || 0
+  let received = 0
 
   const stream = createWriteStream(destPath)
-
-  for (let i = 0; i < totalChunks; i++) {
-    const res = await fetch(`${API_BASE}/download/${packageId}/chunk/${i}`)
-    if (!res.ok) throw new Error(`Failed to download chunk ${i}`)
-    const buf = await res.arrayBuffer()
-
-    await new Promise((resolve, reject) => {
-      stream.write(Buffer.from(buf), (err) => {
-        if (err) return reject(err)
-        eventEmitter.emit('progress', {
-          progress: Math.round(((i + 1) / totalChunks) * 100),
-          text: `Downloading files... ${i + 1}/${totalChunks}`,
-        })
-        resolve()
-      })
-    })
-  }
+  const reader = res.body.getReader()
 
   await new Promise((resolve, reject) => {
-    stream.end((err) => (err ? reject(err) : resolve()))
+    const pump = async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          stream.write(value)
+          received += value.length
+          if (total) {
+            eventEmitter.emit('progress', {
+              progress: Math.round((received / total) * 100),
+              text: `Downloading updates...`,
+            })
+          }
+        }
+        stream.end(resolve)
+      } catch (err) {
+        stream.end()
+        reject(err)
+      }
+    }
+    pump()
   })
 }
 
 export async function syncModpackFiles(modpack, instancePath) {
   await mkdir(instancePath, { recursive: true })
 
+  eventEmitter.emit('status', { text: 'Checking for updates...' })
   const clientFiles = await getLocalFiles(instancePath)
 
-  const checkRes = await fetch(`${API_BASE}/mods/check`, {
+  const checkRes = await fetch(`${API_BASE}/sync/${encodeURIComponent(modpack.name)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modpack: modpack.name, clientFiles }),
+    body: JSON.stringify({ files: clientFiles }),
   })
-  if (!checkRes.ok) throw new Error(`Check failed: ${checkRes.statusText}`)
+  if (!checkRes.ok) throw new Error(`Sync check failed: ${checkRes.statusText}`)
 
-  const { needsUpdate, changes } = await checkRes.json()
+  const { needsUpdate, downloadToken, filesToDelete } = await checkRes.json()
+
   if (!needsUpdate) {
     eventEmitter.emit('status', { text: 'Modpack is up to date' })
     return
   }
 
-  const prepRes = await fetch(`${API_BASE}/mods/prepare`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ modpack: modpack.name, changes }),
-  })
-  if (!prepRes.ok) throw new Error('Failed to prepare package')
+  // Delete files the server no longer has
+  for (const rel of filesToDelete ?? []) {
+    const abs = join(instancePath, rel)
+    if (existsSync(abs)) unlinkSync(abs)
+  }
 
-  const { packageId } = await prepRes.json()
+  // Download and extract the update zip
   const tempZip = join(tmpdir(), `modpack-${Date.now()}.zip`)
-
   try {
     eventEmitter.emit('status', { text: 'Downloading updates...' })
-    await downloadChunked(packageId, tempZip)
+    await downloadZip(
+      `${API_BASE}/sync/${encodeURIComponent(modpack.name)}/download/${downloadToken}`,
+      tempZip
+    )
 
     eventEmitter.emit('status', { text: 'Extracting...' })
     await extract(tempZip, { dir: instancePath })
-
-    await fetch(`${API_BASE}/mods/cleanup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ packageId }),
-    })
 
     eventEmitter.emit('status', { text: 'Sync complete' })
   } finally {

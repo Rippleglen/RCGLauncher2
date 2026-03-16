@@ -7,7 +7,7 @@ import { getOrDownloadJava } from '../services/javaManager'
 import { syncModpackFiles, eventEmitter } from '../services/modpackSync'
 import { getValidAuthData } from '../services/microsoftAuth'
 
-const MODPACKS_URL = 'https://cdn.ripple-co.io/rcg2/jsons/modpacks.json'
+const MODPACKS_URL = 'https://minecraft.eggonomicsgame.com/modpacks'
 
 export function registerGameHandlers(mainWindow, appDataPath) {
   function send(channel, data) {

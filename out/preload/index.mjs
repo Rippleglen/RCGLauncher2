@@ -35,7 +35,8 @@ contextBridge.exposeInMainWorld("electron", {
     getVersion: () => ipcRenderer.invoke("config:getVersion"),
     getJvmArgs: (modpackName) => ipcRenderer.invoke("config:getJvmArgs", modpackName),
     setJvmArgs: (modpackName, args) => ipcRenderer.invoke("config:setJvmArgs", modpackName, args),
-    getDefaultJvmFlags: (mcVersion) => ipcRenderer.invoke("config:getDefaultJvmFlags", mcVersion)
+    getDefaultJvmFlags: (mcVersion) => ipcRenderer.invoke("config:getDefaultJvmFlags", mcVersion),
+    fetchRss: (url) => ipcRenderer.invoke("config:fetchRss", url)
   },
   // Admin / authoring tool
   admin: {

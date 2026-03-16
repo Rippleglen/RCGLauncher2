@@ -56,6 +56,13 @@ export function registerConfigHandlers(appDataPath) {
     return defaultJvmFlags(javaVersion)
   })
 
+  // Fetch an RSS feed URL from the main process to avoid renderer CORS blocks.
+  ipcMain.handle('config:fetchRss', async (_, url) => {
+    const res = await fetch(url, { headers: { 'User-Agent': 'RCGLauncher/2' } })
+    if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`)
+    return res.text()
+  })
+
   ipcMain.handle('config:setJvmArgs', (_, modpackName, args) => {
     const launcherDir = join(appDataPath, 'launcher')
     mkdirSync(launcherDir, { recursive: true })

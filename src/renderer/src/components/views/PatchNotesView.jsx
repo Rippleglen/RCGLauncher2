@@ -8,9 +8,9 @@ export default function PatchNotesView({ modpack }) {
 
   useEffect(() => {
     setLoading(true)
-    // Fetch and filter RSS — main process could do this too, but fetch works in renderer
-    fetch(RSS_URL)
-      .then(r => r.text())
+    // Fetch via main process to avoid CORS block on the RSS feed
+    window.electron.config.fetchRss(RSS_URL)
+      .then(text => text)
       .then(xml => {
         const parser = new DOMParser()
         const doc = parser.parseFromString(xml, 'text/xml')

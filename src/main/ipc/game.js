@@ -10,6 +10,54 @@ import { ensureModloader } from '../services/modloaderInstaller'
 
 const MODPACKS_URL = 'https://minecraft.eggonomicsgame.com/modpacks'
 
+// ── JVM flag presets ──────────────────────────────────────────────────────────
+// Java 17/21 + GraalVM: use ZGC — designed for sub-millisecond pauses, no
+// G1 tuning needed.  Java 8 (legacy packs, Adoptium): G1GC tuned for client
+// with a 37ms pause target instead of Aikar's server-oriented 200ms.
+
+function defaultJvmFlags(majorVersion) {
+  const flags = ['--add-modules=jdk.incubator.vector']
+
+  if (majorVersion >= 17) {
+    flags.push(
+      '-XX:+UseZGC',
+      '-XX:+UnlockExperimentalVMOptions',
+      '-XX:+DisableExplicitGC',
+      '-XX:+AlwaysPreTouch',
+      '-XX:+PerfDisableSharedMem',
+      '-XX:+UseNUMA',
+    )
+    if (majorVersion >= 21) {
+      // Generational ZGC — much better throughput, stable in Java 21
+      flags.push('-XX:+ZGenerational')
+    }
+  } else {
+    // Java 8: G1GC with client-tuned pause target (Aikar-inspired but lower latency)
+    flags.push(
+      '-XX:+UseG1GC',
+      '-XX:+ParallelRefProcEnabled',
+      '-XX:MaxGCPauseMillis=37',
+      '-XX:+UnlockExperimentalVMOptions',
+      '-XX:+DisableExplicitGC',
+      '-XX:+AlwaysPreTouch',
+      '-XX:G1HeapWastePercent=5',
+      '-XX:G1MixedGCCountTarget=4',
+      '-XX:InitiatingHeapOccupancyPercent=15',
+      '-XX:G1MixedGCLiveThresholdPercent=90',
+      '-XX:G1RSetUpdatingPauseTimePercent=5',
+      '-XX:SurvivorRatio=32',
+      '-XX:+PerfDisableSharedMem',
+      '-XX:MaxTenuringThreshold=1',
+      '-XX:G1NewSizePercent=20',
+      '-XX:G1MaxNewSizePercent=40',
+      '-XX:G1HeapRegionSize=16M',
+      '-XX:G1ReservePercent=20',
+    )
+  }
+
+  return flags
+}
+
 export function registerGameHandlers(mainWindow, appDataPath) {
   function send(channel, data) {
     mainWindow?.webContents.send(channel, data)
@@ -28,9 +76,9 @@ export function registerGameHandlers(mainWindow, appDataPath) {
     eventEmitter.on('status',   (data) => send('game:status', data))
 
     try {
-      // 1. Java
+      // 1. Java (GraalVM for 17+, Adoptium for 8)
       send('game:status', { text: 'Checking Java...', stage: 'java' })
-      const javaPath = await getOrDownloadJava(modpack.mcVersion, appDataPath, (text) => {
+      const { javaPath, majorVersion } = await getOrDownloadJava(modpack.mcVersion, appDataPath, (text) => {
         send('game:status', { text, stage: 'java' })
       })
 
@@ -81,8 +129,11 @@ export function registerGameHandlers(mainWindow, appDataPath) {
         overrides: { detached: true },
       }
 
-      if (forgeInstaller)    opts.forge      = forgeInstaller
-      if (extraJvmArgs.length) opts.customArgs = extraJvmArgs
+      if (forgeInstaller) opts.forge = forgeInstaller
+
+      // Merge default performance flags with any user-supplied custom args.
+      // User args come last so they can override defaults if needed.
+      opts.customArgs = [...defaultJvmFlags(majorVersion), ...extraJvmArgs]
 
       await launcher.launch(opts)
       send('game:status', { text: 'Game launched!', stage: 'running' })

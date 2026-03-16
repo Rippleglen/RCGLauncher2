@@ -1,4 +1,3 @@
-// Merged from components/javaDwnld.js + components/javaVersionParser.js
 import { existsSync, createWriteStream } from 'fs'
 import { mkdir, readdir, rename, rm, unlink } from 'fs/promises'
 import { join } from 'path'
@@ -15,11 +14,18 @@ async function getRequiredJavaMajorVersion(minecraftVersion) {
 
   const versionJson = await fetch(entry.url)
   const data = await versionJson.json()
-  return data.javaVersion?.majorVersion ?? 17  // default to 17 if not specified
+  return data.javaVersion?.majorVersion ?? 17
 }
 
-async function fetchAdoptiumDownloadUrl(majorVersion) {
-  const res = await fetch(`https://api.adoptium.net/v3/assets/latest/${majorVersion}/hotspot`)
+// Oracle GraalVM for Java 17+ — free to use, ships the Graal JIT which gives
+// measurably better FPS and fewer micro-stutters than HotSpot (Adoptium).
+// GraalVM dropped Java 8, so we fall back to Adoptium for legacy packs.
+function graalVMDownloadUrl(majorVersion) {
+  return `https://download.oracle.com/graalvm/${majorVersion}/latest/graalvm-jdk-${majorVersion}_windows-x64_bin.zip`
+}
+
+async function adoptiumDownloadUrl(majorVersion) {
+  const res  = await fetch(`https://api.adoptium.net/v3/assets/latest/${majorVersion}/hotspot`)
   const data = await res.json()
   const asset = data.find(a => a.binary.os === 'windows' && a.binary.image_type === 'jre')
   if (!asset) throw new Error(`No Windows JRE found for Java ${majorVersion} on Adoptium`)
@@ -43,46 +49,51 @@ async function downloadFile(url, destPath, onProgress) {
 }
 
 async function installJava(majorVersion, javaDir, onStatus) {
-  const finalPath = join(javaDir, `java${majorVersion}`)
-  const zipPath = join(tmpdir(), `java${majorVersion}-${Date.now()}.zip`)
-  const tempPath = join(tmpdir(), `java${majorVersion}-temp`)
+  const useGraalVM = majorVersion >= 17
+  const label      = useGraalVM ? `GraalVM JDK ${majorVersion}` : `Java ${majorVersion}`
+  const finalPath  = join(javaDir, `java${majorVersion}`)
+  const zipPath    = join(tmpdir(), `java${majorVersion}-${Date.now()}.zip`)
+  const tempPath   = join(tmpdir(), `java${majorVersion}-temp`)
 
-  onStatus?.(`Downloading Java ${majorVersion}...`)
+  onStatus?.(`Downloading ${label}...`)
   await mkdir(javaDir, { recursive: true })
 
-  const downloadUrl = await fetchAdoptiumDownloadUrl(majorVersion)
-  await downloadFile(downloadUrl, zipPath, (pct) => {
-    onStatus?.(`Downloading Java ${majorVersion}... ${pct}%`)
+  const url = useGraalVM
+    ? graalVMDownloadUrl(majorVersion)
+    : await adoptiumDownloadUrl(majorVersion)
+
+  await downloadFile(url, zipPath, pct => {
+    onStatus?.(`Downloading ${label}... ${pct}%`)
   })
 
-  onStatus?.(`Extracting Java ${majorVersion}...`)
+  onStatus?.(`Installing ${label}...`)
   await extract(zipPath, { dir: tempPath })
 
-  // Adoptium zips contain a single top-level folder — move its contents to finalPath
+  // Both GraalVM and Adoptium zips have a single top-level folder — flatten it
   const [innerFolder] = await readdir(tempPath)
   const innerPath = join(tempPath, innerFolder)
   await mkdir(finalPath, { recursive: true })
 
-  const items = await readdir(innerPath)
-  for (const item of items) {
+  for (const item of await readdir(innerPath)) {
     await rename(join(innerPath, item), join(finalPath, item))
   }
 
   await rm(tempPath, { recursive: true, force: true })
   await unlink(zipPath).catch(() => {})
 
-  onStatus?.(`Java ${majorVersion} installed`)
+  onStatus?.(`${label} installed`)
   return finalPath
 }
 
+// Returns { javaPath, majorVersion } so the caller can pick the right JVM flags.
 export async function getOrDownloadJava(minecraftVersion, appDataPath, onStatus) {
-  const javaDir = join(appDataPath, 'launcher', 'java')
+  const javaDir      = join(appDataPath, 'launcher', 'java')
   const majorVersion = await getRequiredJavaMajorVersion(minecraftVersion)
-  const javaPath = join(javaDir, `java${majorVersion}`, 'bin', 'javaw.exe')
+  const javaPath     = join(javaDir, `java${majorVersion}`, 'bin', 'javaw.exe')
 
   if (!existsSync(javaPath)) {
     await installJava(majorVersion, javaDir, onStatus)
   }
 
-  return javaPath
+  return { javaPath, majorVersion }
 }

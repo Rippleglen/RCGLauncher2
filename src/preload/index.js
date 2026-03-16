@@ -42,9 +42,9 @@ contextBridge.exposeInMainWorld('electron', {
     setJvmArgs: (modpackName, args) => ipcRenderer.invoke('config:setJvmArgs', modpackName, args),
   },
 
-  // Updater events (for splash screen)
+  // Updater — pull based: call check(), await it, listen for status updates
   updater: {
+    check: () => ipcRenderer.invoke('updater:check'),
     onStatus: (cb) => ipcRenderer.on('updater:status', (_, data) => cb(data)),
-    onReady: (cb) => ipcRenderer.on('updater:ready', () => cb()),
   }
 })

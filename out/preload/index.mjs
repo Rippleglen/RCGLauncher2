@@ -1,0 +1,44 @@
+import { contextBridge, ipcRenderer } from "electron";
+contextBridge.exposeInMainWorld("electron", {
+  // Window controls
+  window: {
+    minimize: () => ipcRenderer.send("window:minimize"),
+    maximize: () => ipcRenderer.send("window:maximize"),
+    close: () => ipcRenderer.send("window:close")
+  },
+  // Auth
+  auth: {
+    login: () => ipcRenderer.invoke("auth:login"),
+    getUser: () => ipcRenderer.invoke("auth:getUser"),
+    logout: () => ipcRenderer.invoke("auth:logout")
+  },
+  // Game
+  game: {
+    fetchModpacks: () => ipcRenderer.invoke("game:fetchModpacks"),
+    launch: (modpack) => ipcRenderer.invoke("game:launch", modpack),
+    onProgress: (cb) => ipcRenderer.on("game:progress", (_, data) => cb(data)),
+    onStatus: (cb) => ipcRenderer.on("game:status", (_, data) => cb(data)),
+    onLog: (cb) => ipcRenderer.on("game:log", (_, data) => cb(data)),
+    onClosed: (cb) => ipcRenderer.on("game:closed", (_, data) => cb(data)),
+    removeListeners: () => {
+      ipcRenderer.removeAllListeners("game:progress");
+      ipcRenderer.removeAllListeners("game:status");
+      ipcRenderer.removeAllListeners("game:log");
+      ipcRenderer.removeAllListeners("game:closed");
+    }
+  },
+  // Config / settings
+  config: {
+    get: () => ipcRenderer.invoke("config:get"),
+    set: (updates) => ipcRenderer.invoke("config:set", updates),
+    getSystemRam: () => ipcRenderer.invoke("config:getSystemRam"),
+    getVersion: () => ipcRenderer.invoke("config:getVersion"),
+    getJvmArgs: (modpackName) => ipcRenderer.invoke("config:getJvmArgs", modpackName),
+    setJvmArgs: (modpackName, args) => ipcRenderer.invoke("config:setJvmArgs", modpackName, args)
+  },
+  // Updater — pull based: call check(), await it, listen for status updates
+  updater: {
+    check: () => ipcRenderer.invoke("updater:check"),
+    onStatus: (cb) => ipcRenderer.on("updater:status", (_, data) => cb(data))
+  }
+});

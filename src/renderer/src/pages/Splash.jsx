@@ -7,8 +7,8 @@ export default function Splash() {
 
   useEffect(() => {
     window.electron.updater.onStatus((data) => {
-      setStatus(data.text)
-      setProgress(data.progress ?? 0)
+      if (data.text) setStatus(data.text)
+      if (data.progress) setProgress(data.progress)
     })
   }, [])
 

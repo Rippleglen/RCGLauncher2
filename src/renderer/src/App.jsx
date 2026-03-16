@@ -9,8 +9,10 @@ export default function App() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    // Listen for updater ready signal from main process
-    window.electron.updater.onReady(async () => {
+    const init = async () => {
+      // Wait for updater to finish (pull-based — no timing race)
+      await window.electron.updater.check()
+
       try {
         const authData = await window.electron.auth.getUser()
         setUser(authData)
@@ -18,7 +20,8 @@ export default function App() {
       } catch {
         setPage('welcome')
       }
-    })
+    }
+    init()
   }, [])
 
   const handleLoginSuccess = (authData) => {
